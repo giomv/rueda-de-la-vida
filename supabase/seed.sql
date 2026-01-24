@@ -1,0 +1,3 @@
+-- This file contains seed data for development
+-- Domain suggestions are hardcoded in the app, not stored in DB
+-- This file is here for any future seed data needs
