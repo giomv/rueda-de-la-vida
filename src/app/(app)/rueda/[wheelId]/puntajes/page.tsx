@@ -16,7 +16,7 @@ export default function PuntajesPage() {
   const wheelId = params.wheelId as string;
   const [loading, setLoading] = useState(true);
 
-  const { domains, scores, setDomains, setScores, updateScore, setWheelId, hydrate } =
+  const { domains, scores, updateScore, setWheelId, hydrate, isDirty } =
     useWizardStore();
 
   useEffect(() => {
@@ -108,12 +108,13 @@ export default function PuntajesPage() {
         <div className="max-w-2xl mx-auto flex gap-3">
           <Button
             variant="outline"
+            disabled={isDirty || isSaving}
             onClick={() => router.push(`/rueda/${wheelId}/dominios`)}
           >
             <ChevronLeft className="h-4 w-4 mr-1" />
             Dominios
           </Button>
-          <Button onClick={handleContinue} className="flex-1">
+          <Button disabled={isDirty || isSaving} onClick={handleContinue} className="flex-1">
             Ver resultado
             <ChevronRight className="h-4 w-4 ml-1" />
           </Button>
