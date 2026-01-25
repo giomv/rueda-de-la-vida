@@ -117,6 +117,23 @@ export interface GuestSession {
   expires_at: string;
 }
 
+export interface LifeDomain {
+  id: string;
+  user_id: string;
+  name: string;
+  slug: string;
+  icon: string | null;
+  order_position: number;
+  created_at: string;
+}
+
+export interface WheelDomainSelection {
+  id: string;
+  wheel_id: string;
+  domain_id: string;
+  order_position: number;
+}
+
 export interface WheelWithDomains extends Wheel {
   domains: Domain[];
   scores: Score[];
@@ -177,3 +194,5 @@ export const IDEAL_LIFE_PROMPTS = [
   { key: 'who', label: '¿Con quién estoy?' },
   { key: 'where', label: '¿Dónde estoy?' },
 ];
+
+export * from './odyssey';

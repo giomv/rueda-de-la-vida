@@ -2,12 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, CircleDot, Heart, User } from 'lucide-react';
+import { LayoutDashboard, CircleDot, Heart, User, Map } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { href: '/inicio', label: 'Inicio', icon: LayoutDashboard },
   { href: '/mis-ruedas', label: 'Ruedas', icon: CircleDot },
+  { href: '/plan-de-vida', label: 'Plan', icon: Map },
   { href: '/pareja', label: 'Pareja', icon: Heart },
   { href: '/perfil', label: 'Perfil', icon: User },
 ];

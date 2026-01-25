@@ -33,6 +33,7 @@ export async function updateSession(request: NextRequest) {
   const isAppRoute = request.nextUrl.pathname.startsWith('/inicio') ||
     request.nextUrl.pathname.startsWith('/rueda') ||
     request.nextUrl.pathname.startsWith('/mis-ruedas') ||
+    request.nextUrl.pathname.startsWith('/plan-de-vida') ||
     request.nextUrl.pathname.startsWith('/comparar') ||
     request.nextUrl.pathname.startsWith('/pareja') ||
     request.nextUrl.pathname.startsWith('/perfil') ||

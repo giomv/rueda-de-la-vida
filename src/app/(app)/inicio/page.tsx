@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { OnboardingSlider } from '@/components/onboarding/OnboardingSlider';
 import { InfoAccordion } from '@/components/onboarding/InfoAccordion';
 import { RadarChart } from '@/components/wheel/RadarChart';
-import { Plus, CircleDot, TrendingUp } from 'lucide-react';
+import { Plus, CircleDot, TrendingUp, Map } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import type { WheelWithDomains } from '@/lib/types';
 import { calculateAverage, calculateBalance } from '@/lib/utils/wheel-insights';
@@ -118,6 +118,22 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           )}
+
+          <Link href="/plan-de-vida">
+            <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+              <CardContent className="flex items-center gap-4 py-4">
+                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Map className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">Plan de Vida</p>
+                  <p className="text-xs text-muted-foreground">
+                    Diseña 3 planes alternativos a 5 años
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
 
           {wheels.length > 1 && (
             <Card>

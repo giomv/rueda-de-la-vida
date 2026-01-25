@@ -1,0 +1,1 @@
+ALTER TABLE odyssey_plans ADD COLUMN year_names JSONB DEFAULT '{}';

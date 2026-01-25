@@ -10,6 +10,7 @@ import {
   Heart,
   User,
   HelpCircle,
+  Map,
   Moon,
   Sun,
 } from 'lucide-react';
@@ -20,6 +21,7 @@ import { cn } from '@/lib/utils';
 const navItems = [
   { href: '/inicio', label: 'Inicio', icon: LayoutDashboard },
   { href: '/mis-ruedas', label: 'Mis Ruedas', icon: CircleDot },
+  { href: '/plan-de-vida', label: 'Plan de Vida', icon: Map },
   { href: '/comparar', label: 'Comparar', icon: GitCompareArrows },
   { href: '/pareja', label: 'Pareja', icon: Heart },
   { href: '/perfil', label: 'Perfil', icon: User },
