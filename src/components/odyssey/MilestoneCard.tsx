@@ -43,32 +43,37 @@ export function MilestoneCard({ milestone, onEdit, onDelete, domains = [] }: Mil
       style={style}
       className={`${milestone.tag ? TAG_INDICATOR[milestone.tag] : ''} ${isDragging ? 'shadow-lg z-50' : ''}`}
     >
-      <CardContent className="py-3 px-4">
-        <div className="flex items-start justify-between gap-2">
+      <CardContent className="py-2 px-3 space-y-2">
+        {/* Top row: drag handle + domain badge */}
+        <div className="flex items-center justify-between gap-2">
           <div
             {...attributes}
             {...listeners}
-            className="cursor-grab active:cursor-grabbing touch-none shrink-0 mt-0.5"
+            className="cursor-grab active:cursor-grabbing touch-none shrink-0"
           >
             <GripVertical className="h-4 w-4 text-muted-foreground" />
           </div>
-          <div className="flex-1 min-w-0 space-y-1">
-            <p className="text-sm font-medium truncate">{milestone.title}</p>
-            {milestone.description && (
-              <p className="text-xs text-muted-foreground line-clamp-2">
-                {milestone.description}
-              </p>
-            )}
-            <DomainBadge domain={domain} fallbackCategory={milestone.category} />
-          </div>
-          <div className="flex items-center gap-1 shrink-0">
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onEdit}>
-              <Pencil className="h-3.5 w-3.5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={onDelete}>
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
-          </div>
+          <DomainBadge domain={domain} fallbackCategory={milestone.category} />
+        </div>
+
+        {/* Content: title + description (full width) */}
+        <div className="space-y-1">
+          <p className="text-sm font-medium leading-tight">{milestone.title}</p>
+          {milestone.description && (
+            <p className="text-xs text-muted-foreground line-clamp-3">
+              {milestone.description}
+            </p>
+          )}
+        </div>
+
+        {/* Bottom row: action buttons */}
+        <div className="flex items-center justify-end gap-1">
+          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onEdit}>
+            <Pencil className="h-3 w-3" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={onDelete}>
+            <Trash2 className="h-3 w-3" />
+          </Button>
         </div>
       </CardContent>
     </Card>

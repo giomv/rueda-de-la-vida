@@ -9,9 +9,12 @@ import { Slider } from '@/components/ui/slider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { WizardProgress } from '@/components/app/WizardProgress';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { getWheelData, saveActionPlan } from '@/lib/actions/wheel-actions';
-import { ChevronRight, ChevronLeft, Plus, X } from 'lucide-react';
-import type { Domain, ActionItem } from '@/lib/types';
+import { ChevronRight, ChevronLeft, Plus, X, Info } from 'lucide-react';
+import type { Domain, ActionItem, Reflection, IdealLife } from '@/lib/types';
+import { REFLECTION_QUESTIONS, IDEAL_LIFE_PROMPTS } from '@/lib/types';
 
 interface PlanState {
   goalText: string;
@@ -28,6 +31,8 @@ export default function PlanPage() {
   const [focusDomains, setFocusDomains] = useState<Domain[]>([]);
   const [plans, setPlans] = useState<Record<string, PlanState>>({});
   const [newActionText, setNewActionText] = useState<Record<string, string>>({});
+  const [reflections, setReflections] = useState<Reflection[]>([]);
+  const [idealLife, setIdealLife] = useState<IdealLife[]>([]);
 
   useEffect(() => {
     async function load() {
@@ -48,6 +53,8 @@ export default function PlanPage() {
         };
       });
       setPlans(planState);
+      setReflections(data.reflections);
+      setIdealLife(data.idealLife);
       setLoading(false);
     }
     load();
@@ -124,6 +131,70 @@ export default function PlanPage() {
           </p>
         </div>
 
+        {/* Context accordion with reflections and ideal life */}
+        <Accordion type="single" collapsible className="w-full">
+          <AccordionItem value="reflections">
+            <AccordionTrigger className="text-sm">
+              📝 Mis reflexiones
+            </AccordionTrigger>
+            <AccordionContent>
+              <div className="space-y-3 text-sm">
+                {REFLECTION_QUESTIONS.map((question) => {
+                  const answer = reflections.find((r) => r.question_key === question.key);
+                  if (!answer?.answer_text) return null;
+                  return (
+                    <div key={question.key}>
+                      <p className="font-medium text-muted-foreground">{question.label}</p>
+                      <p className="mt-1">{answer.answer_text}</p>
+                    </div>
+                  );
+                })}
+                {reflections.filter((r) => r.answer_text).length === 0 && (
+                  <p className="text-muted-foreground italic">No hay reflexiones guardadas.</p>
+                )}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="ideal-life">
+            <AccordionTrigger className="text-sm">
+              ✨ Mi vida ideal
+            </AccordionTrigger>
+            <AccordionContent>
+              <div className="space-y-4 text-sm">
+                {focusDomains.map((domain) => {
+                  const vision = idealLife.find((il) => il.domain_id === domain.id);
+                  if (!vision?.vision_text && !Object.values(vision?.prompts_answers || {}).some(Boolean)) return null;
+                  return (
+                    <div key={domain.id} className="space-y-2">
+                      <p className="font-medium">{domain.icon} {domain.name}</p>
+                      {vision?.vision_text && (
+                        <p className="text-muted-foreground">{vision.vision_text}</p>
+                      )}
+                      {vision?.prompts_answers && Object.keys(vision.prompts_answers).length > 0 && (
+                        <div className="ml-3 space-y-1">
+                          {IDEAL_LIFE_PROMPTS.map((prompt) => {
+                            const answer = vision.prompts_answers[prompt.key];
+                            if (!answer) return null;
+                            return (
+                              <p key={prompt.key}>
+                                <span className="text-muted-foreground">{prompt.label}</span> {answer}
+                              </p>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+                {idealLife.filter((il) => il.vision_text || Object.values(il.prompts_answers || {}).some(Boolean)).length === 0 && (
+                  <p className="text-muted-foreground italic">No hay visión de vida ideal guardada.</p>
+                )}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+
         {focusDomains.map((domain) => {
           const plan = plans[domain.id];
           if (!plan) return null;
@@ -138,7 +209,19 @@ export default function PlanPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label className="text-sm">Meta</Label>
+                  <div className="flex items-center gap-1.5">
+                    <Label className="text-sm">Meta</Label>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs">
+                        <p className="font-semibold">Meta SMART = clara y medible.</p>
+                        <p className="mt-1">Define qué quieres lograr, cuánto, y para cuándo.</p>
+                        <p className="mt-1 text-muted-foreground">Ejemplo: &quot;Ahorrar S/ 500 al mes hasta junio.&quot;</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
                   <Input
                     placeholder="¿Qué quieres lograr en esta área?"
                     value={plan.goalText}

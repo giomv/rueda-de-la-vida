@@ -17,6 +17,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { MilestoneTagSelector } from './MilestoneTagSelector';
 import { DomainSelector } from './DomainSelector';
 import { MILESTONE_CATEGORIES } from '@/lib/types';
@@ -32,6 +34,7 @@ interface MilestoneFormProps {
     domain_id: string | null;
     tag: MilestoneTag;
     year: number;
+    replicateToAllYears?: boolean;
   }) => void;
   year: number;
   initial?: Partial<OdysseyMilestone>;
@@ -46,6 +49,9 @@ export function MilestoneForm({ open, onClose, onSave, year, initial, showTags =
   const [category, setCategory] = useState<MilestoneCategory | null>(initial?.category || null);
   const [tag, setTag] = useState<MilestoneTag>(initial?.tag || 'normal');
   const [selectedYear, setSelectedYear] = useState(initial?.year || year);
+  const [replicateToAllYears, setReplicateToAllYears] = useState(false);
+
+  const isNewMilestone = !initial;
 
   // Reset form when initial changes
   useEffect(() => {
@@ -55,6 +61,7 @@ export function MilestoneForm({ open, onClose, onSave, year, initial, showTags =
     setCategory(initial?.category || null);
     setTag(initial?.tag || 'normal');
     setSelectedYear(initial?.year || year);
+    setReplicateToAllYears(false);
   }, [initial, year]);
 
   const handleSave = () => {
@@ -66,6 +73,7 @@ export function MilestoneForm({ open, onClose, onSave, year, initial, showTags =
       domain_id: domainId,
       tag,
       year: selectedYear,
+      replicateToAllYears: isNewMilestone ? replicateToAllYears : undefined,
     });
     setTitle('');
     setDescription('');
@@ -73,6 +81,7 @@ export function MilestoneForm({ open, onClose, onSave, year, initial, showTags =
     setCategory(null);
     setTag('normal');
     setSelectedYear(year);
+    setReplicateToAllYears(false);
     onClose();
   };
 
@@ -153,6 +162,19 @@ export function MilestoneForm({ open, onClose, onSave, year, initial, showTags =
             <div>
               <label className="text-sm font-medium mb-1.5 block">Tipo</label>
               <MilestoneTagSelector value={tag} onChange={setTag} />
+            </div>
+          )}
+
+          {isNewMilestone && (
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="replicate-years"
+                checked={replicateToAllYears}
+                onCheckedChange={(checked) => setReplicateToAllYears(checked === true)}
+              />
+              <Label htmlFor="replicate-years" className="text-sm cursor-pointer">
+                Replicar en todos los años
+              </Label>
             </div>
           )}
 

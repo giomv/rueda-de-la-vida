@@ -1,0 +1,253 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { FrequencySelector } from './FrequencySelector';
+import { createActivity, updateActivity } from '@/lib/actions/lifeplan-actions';
+import { cn } from '@/lib/utils';
+import type { LifePlanActivity, FrequencyType, CreateActivityInput } from '@/lib/types/lifeplan';
+import type { LifeDomain, Goal } from '@/lib/types';
+
+interface ActivityFormProps {
+  activity?: LifePlanActivity;
+  domains: LifeDomain[];
+  goals: Goal[];
+  onSave?: (activity: LifePlanActivity) => void;
+  onCancel?: () => void;
+  className?: string;
+}
+
+export function ActivityForm({
+  activity,
+  domains,
+  goals,
+  onSave,
+  onCancel,
+  className,
+}: ActivityFormProps) {
+  const router = useRouter();
+  const isEditing = !!activity;
+
+  // Form state
+  const [title, setTitle] = useState(activity?.title || '');
+  const [notes, setNotes] = useState(activity?.notes || '');
+  const [domainId, setDomainId] = useState<string | null>(activity?.domain_id || null);
+  const [goalId, setGoalId] = useState<string | null>(activity?.goal_id || null);
+  const [frequencyType, setFrequencyType] = useState<FrequencyType>(
+    activity?.frequency_type || 'WEEKLY'
+  );
+  const [frequencyValue, setFrequencyValue] = useState(activity?.frequency_value || 1);
+  const [scheduledDays, setScheduledDays] = useState<string[]>(
+    activity?.scheduled_days || []
+  );
+  const [timeOfDay, setTimeOfDay] = useState(activity?.time_of_day || '');
+
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Filter goals by selected domain
+  const filteredGoals = domainId
+    ? goals.filter((g) => g.domain_id === domainId || !g.domain_id)
+    : goals;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!title.trim()) {
+      setError('El título es requerido');
+      return;
+    }
+
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      const input: CreateActivityInput = {
+        title: title.trim(),
+        notes: notes.trim() || undefined,
+        domain_id: domainId,
+        goal_id: goalId,
+        frequency_type: frequencyType,
+        frequency_value: frequencyValue,
+        scheduled_days: scheduledDays.length > 0 ? scheduledDays : undefined,
+        time_of_day: timeOfDay || null,
+      };
+
+      let saved: LifePlanActivity;
+      if (isEditing && activity) {
+        saved = await updateActivity(activity.id, input);
+      } else {
+        saved = await createActivity(input);
+      }
+
+      onSave?.(saved);
+      router.push('/mi-plan/hoy');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al guardar');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCancel = () => {
+    if (onCancel) {
+      onCancel();
+    } else {
+      router.back();
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className={cn('space-y-6', className)}>
+      {error && (
+        <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-lg">
+          {error}
+        </div>
+      )}
+
+      {/* Basic info */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Información básica</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="title">Título *</Label>
+            <Input
+              id="title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Ej: Meditar 10 minutos"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="notes">Notas (opcional)</Label>
+            <Textarea
+              id="notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Agrega detalles o instrucciones..."
+              rows={3}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Categorization */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Categorización</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Dominio de vida (opcional)</Label>
+            <Select
+              value={domainId || 'none'}
+              onValueChange={(value) => setDomainId(value === 'none' ? null : value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar dominio" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sin dominio</SelectItem>
+                {domains.map((domain) => (
+                  <SelectItem key={domain.id} value={domain.id}>
+                    {domain.icon && <span className="mr-2">{domain.icon}</span>}
+                    {domain.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Meta relacionada (opcional)</Label>
+            <Select
+              value={goalId || 'none'}
+              onValueChange={(value) => setGoalId(value === 'none' ? null : value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar meta" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sin meta</SelectItem>
+                {filteredGoals.map((goal) => (
+                  <SelectItem key={goal.id} value={goal.id}>
+                    {goal.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Frequency */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Frecuencia</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <FrequencySelector
+            frequencyType={frequencyType}
+            frequencyValue={frequencyValue}
+            scheduledDays={scheduledDays}
+            onFrequencyTypeChange={setFrequencyType}
+            onFrequencyValueChange={setFrequencyValue}
+            onScheduledDaysChange={setScheduledDays}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Time */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Horario (opcional)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <Label htmlFor="timeOfDay">Hora del día</Label>
+            <Input
+              id="timeOfDay"
+              type="time"
+              value={timeOfDay}
+              onChange={(e) => setTimeOfDay(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Agrega un horario para recordatorios (próximamente)
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Actions */}
+      <div className="flex gap-3">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={handleCancel}
+          className="flex-1"
+        >
+          Cancelar
+        </Button>
+        <Button type="submit" disabled={isSaving} className="flex-1">
+          {isSaving ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Crear actividad'}
+        </Button>
+      </div>
+    </form>
+  );
+}

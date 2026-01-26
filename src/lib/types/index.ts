@@ -196,3 +196,4 @@ export const IDEAL_LIFE_PROMPTS = [
 ];
 
 export * from './odyssey';
+export * from './lifeplan';
