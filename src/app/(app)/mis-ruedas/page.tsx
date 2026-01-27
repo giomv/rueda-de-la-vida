@@ -85,7 +85,7 @@ export default function MisRuedasPage() {
                 <div className="flex items-start justify-between mb-3">
                   <div>
                     <Link
-                      href={`/rueda/${wheel.id}/resultado`}
+                      href={`/rueda/${wheel.id}/plan`}
                       className="font-semibold hover:text-primary transition-colors"
                     >
                       {wheel.title}
@@ -117,7 +117,7 @@ export default function MisRuedasPage() {
                 </div>
 
                 {wheel.scores.length > 0 && (
-                  <Link href={`/rueda/${wheel.id}/resultado`}>
+                  <Link href={`/rueda/${wheel.id}/plan`}>
                     <RadarChart
                       domains={wheel.domains}
                       scores={wheel.scores}

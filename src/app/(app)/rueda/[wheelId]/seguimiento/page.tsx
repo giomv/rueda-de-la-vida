@@ -7,9 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { WizardProgress } from '@/components/app/WizardProgress';
 import { getWheelData } from '@/lib/actions/wheel-actions';
-import { createClient } from '@/lib/supabase/client';
 import { ChevronLeft, CheckCircle, Calendar, Trophy } from 'lucide-react';
-import type { Domain, ActionItem } from '@/lib/types';
+import type { ActionItem } from '@/lib/types';
 
 interface HabitEntry {
   id: string;

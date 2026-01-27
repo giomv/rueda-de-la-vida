@@ -10,11 +10,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { WizardProgress } from '@/components/app/WizardProgress';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { getWheelData, saveActionPlan } from '@/lib/actions/wheel-actions';
-import { ChevronRight, ChevronLeft, Plus, X, Info } from 'lucide-react';
-import type { Domain, ActionItem, Reflection, IdealLife } from '@/lib/types';
-import { REFLECTION_QUESTIONS, IDEAL_LIFE_PROMPTS } from '@/lib/types';
+import { ChevronRight, ChevronLeft, ChevronDown, Plus, X, Info } from 'lucide-react';
+import type { Domain, ActionItem, Reflection, IdealLife, FrequencyType } from '@/lib/types';
+import { REFLECTION_QUESTIONS, IDEAL_LIFE_PROMPTS, FREQUENCY_OPTIONS } from '@/lib/types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface PlanState {
   goalText: string;
@@ -29,8 +31,12 @@ export default function PlanPage() {
 
   const [loading, setLoading] = useState(true);
   const [focusDomains, setFocusDomains] = useState<Domain[]>([]);
+  const [otherDomains, setOtherDomains] = useState<Domain[]>([]);
+  const [showOtherDomains, setShowOtherDomains] = useState(false);
+  const [openDomains, setOpenDomains] = useState<Set<string>>(new Set());
   const [plans, setPlans] = useState<Record<string, PlanState>>({});
   const [newActionText, setNewActionText] = useState<Record<string, string>>({});
+  const [newActionFrequency, setNewActionFrequency] = useState<Record<string, FrequencyType>>({});
   const [reflections, setReflections] = useState<Reflection[]>([]);
   const [idealLife, setIdealLife] = useState<IdealLife[]>([]);
 
@@ -41,18 +47,24 @@ export default function PlanPage() {
         .filter((p) => p.is_focus)
         .map((p) => p.domain_id);
       const focus = data.domains.filter((d) => focusIds.includes(d.id));
+      const other = data.domains.filter((d) => !focusIds.includes(d.id));
       setFocusDomains(focus);
+      setOtherDomains(other);
 
       const planState: Record<string, PlanState> = {};
-      focus.forEach((domain) => {
+      const defaultFrequency: Record<string, FrequencyType> = {};
+      // Initialize plans for all domains
+      data.domains.forEach((domain) => {
         const existing = data.actionPlans.find((ap) => ap.domain_id === domain.id);
         planState[domain.id] = {
           goalText: existing?.goal_text || '',
           targetScore: existing?.target_score || 8,
           actions: (existing?.actions as ActionItem[]) || [],
         };
+        defaultFrequency[domain.id] = 'WEEKLY';
       });
       setPlans(planState);
+      setNewActionFrequency(defaultFrequency);
       setReflections(data.reflections);
       setIdealLife(data.idealLife);
       setLoading(false);
@@ -64,17 +76,24 @@ export default function PlanPage() {
     const text = newActionText[domainId]?.trim();
     if (!text) return;
 
+    const newAction: ActionItem = {
+      id: crypto.randomUUID(),
+      text,
+      completed: false,
+      frequency_type: newActionFrequency[domainId] || 'WEEKLY',
+      goal_id: null,
+      domain_id: domainId,
+    };
+
     setPlans((prev) => ({
       ...prev,
       [domainId]: {
         ...prev[domainId],
-        actions: [
-          ...prev[domainId].actions,
-          { id: crypto.randomUUID(), text, completed: false },
-        ],
+        actions: [...prev[domainId].actions, newAction],
       },
     }));
     setNewActionText((prev) => ({ ...prev, [domainId]: '' }));
+    setNewActionFrequency((prev) => ({ ...prev, [domainId]: 'WEEKLY' }));
   };
 
   const handleRemoveAction = (domainId: string, actionId: string) => {
@@ -97,6 +116,18 @@ export default function PlanPage() {
         ),
       },
     }));
+  };
+
+  const toggleDomain = (domainId: string) => {
+    setOpenDomains((prev) => {
+      const next = new Set(prev);
+      if (next.has(domainId)) {
+        next.delete(domainId);
+      } else {
+        next.add(domainId);
+      }
+      return next;
+    });
   };
 
   const handleContinue = async () => {
@@ -254,29 +285,40 @@ export default function PlanPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-sm">Acciones semanales</Label>
-                  <div className="space-y-1.5">
-                    {plan.actions.map((action) => (
-                      <div key={action.id} className="flex items-center gap-2 group">
-                        <Checkbox
-                          checked={action.completed}
-                          onCheckedChange={() =>
-                            handleToggleAction(domain.id, action.id)
-                          }
-                        />
-                        <span className={`text-sm flex-1 ${action.completed ? 'line-through text-muted-foreground' : ''}`}>
-                          {action.text}
-                        </span>
-                        <button
-                          onClick={() => handleRemoveAction(domain.id, action.id)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <X className="h-3 w-3 text-muted-foreground" />
-                        </button>
-                      </div>
-                    ))}
+                  <Label className="text-sm">Acciones</Label>
+                  <div className="space-y-2">
+                    {plan.actions.map((action) => {
+                      const freqLabel = FREQUENCY_OPTIONS.find(f => f.key === action.frequency_type)?.label || 'Semanal';
+                      return (
+                        <div key={action.id} className="flex items-start gap-2 group p-2 rounded-md hover:bg-muted/50">
+                          <Checkbox
+                            checked={action.completed}
+                            onCheckedChange={() =>
+                              handleToggleAction(domain.id, action.id)
+                            }
+                            className="mt-0.5"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <span className={`text-sm ${action.completed ? 'line-through text-muted-foreground' : ''}`}>
+                              {action.text}
+                            </span>
+                            <div className="flex gap-2 mt-1 flex-wrap">
+                              <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 px-1.5 py-0.5 rounded">
+                                {freqLabel}
+                              </span>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleRemoveAction(domain.id, action.id)}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="h-3 w-3 text-muted-foreground" />
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="space-y-2 pt-2 border-t border-border">
                     <Input
                       placeholder="Nueva acción..."
                       value={newActionText[domain.id] || ''}
@@ -291,19 +333,215 @@ export default function PlanPage() {
                       }
                       className="text-sm"
                     />
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleAddAction(domain.id)}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
+                    <div className="flex gap-2 flex-wrap">
+                      <Select
+                        value={newActionFrequency[domain.id] || 'WEEKLY'}
+                        onValueChange={(val) =>
+                          setNewActionFrequency((prev) => ({
+                            ...prev,
+                            [domain.id]: val as FrequencyType,
+                          }))
+                        }
+                      >
+                        <SelectTrigger size="sm" className="w-[120px]">
+                          <SelectValue placeholder="Frecuencia" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {FREQUENCY_OPTIONS.map((opt) => (
+                            <SelectItem key={opt.key} value={opt.key}>
+                              {opt.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleAddAction(domain.id)}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
           );
         })}
+
+        {/* Other domains toggle */}
+        {otherDomains.length > 0 && (
+          <>
+            <Button
+              variant="ghost"
+              className="w-full justify-center gap-2 text-muted-foreground"
+              onClick={() => setShowOtherDomains(!showOtherDomains)}
+            >
+              <ChevronDown className={`h-4 w-4 transition-transform ${showOtherDomains ? 'rotate-180' : ''}`} />
+              {showOtherDomains ? 'Ocultar otras áreas' : `Mostrar otras áreas (${otherDomains.length})`}
+            </Button>
+
+            {showOtherDomains && (
+              <div className="space-y-4">
+                {otherDomains.map((domain) => {
+                  const plan = plans[domain.id];
+                  if (!plan) return null;
+                  const isOpen = openDomains.has(domain.id);
+
+                  return (
+                    <Collapsible key={domain.id} open={isOpen} onOpenChange={() => toggleDomain(domain.id)}>
+                      <Card>
+                        <CollapsibleTrigger asChild>
+                          <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                            <CardTitle className="text-base flex items-center gap-2">
+                              <ChevronRight className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
+                              <span>{domain.icon}</span>
+                              {domain.name}
+                              {plan.actions.length > 0 && (
+                                <span className="ml-auto text-xs text-muted-foreground font-normal">
+                                  {plan.actions.length} {plan.actions.length === 1 ? 'acción' : 'acciones'}
+                                </span>
+                              )}
+                            </CardTitle>
+                          </CardHeader>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <CardContent className="space-y-4 pt-0">
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-1.5">
+                                <Label className="text-sm">Meta</Label>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" className="max-w-xs">
+                                    <p className="font-semibold">Meta SMART = clara y medible.</p>
+                                    <p className="mt-1">Define qué quieres lograr, cuánto, y para cuándo.</p>
+                                    <p className="mt-1 text-muted-foreground">Ejemplo: &quot;Ahorrar S/ 500 al mes hasta junio.&quot;</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </div>
+                              <Input
+                                placeholder="¿Qué quieres lograr en esta área?"
+                                value={plan.goalText}
+                                onChange={(e) =>
+                                  setPlans((prev) => ({
+                                    ...prev,
+                                    [domain.id]: { ...prev[domain.id], goalText: e.target.value },
+                                  }))
+                                }
+                              />
+                            </div>
+
+                            <div className="space-y-2">
+                              <div className="flex justify-between">
+                                <Label className="text-sm">Puntaje objetivo</Label>
+                                <span className="text-sm font-medium">{plan.targetScore}/10</span>
+                              </div>
+                              <Slider
+                                value={[plan.targetScore]}
+                                onValueChange={([val]) =>
+                                  setPlans((prev) => ({
+                                    ...prev,
+                                    [domain.id]: { ...prev[domain.id], targetScore: val },
+                                  }))
+                                }
+                                min={1}
+                                max={10}
+                                step={1}
+                              />
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label className="text-sm">Acciones</Label>
+                              <div className="space-y-2">
+                                {plan.actions.map((action) => {
+                                  const freqLabel = FREQUENCY_OPTIONS.find(f => f.key === action.frequency_type)?.label || 'Semanal';
+                                  return (
+                                    <div key={action.id} className="flex items-start gap-2 group p-2 rounded-md hover:bg-muted/50">
+                                      <Checkbox
+                                        checked={action.completed}
+                                        onCheckedChange={() =>
+                                          handleToggleAction(domain.id, action.id)
+                                        }
+                                        className="mt-0.5"
+                                      />
+                                      <div className="flex-1 min-w-0">
+                                        <span className={`text-sm ${action.completed ? 'line-through text-muted-foreground' : ''}`}>
+                                          {action.text}
+                                        </span>
+                                        <div className="flex gap-2 mt-1 flex-wrap">
+                                          <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 px-1.5 py-0.5 rounded">
+                                            {freqLabel}
+                                          </span>
+                                        </div>
+                                      </div>
+                                      <button
+                                        onClick={() => handleRemoveAction(domain.id, action.id)}
+                                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                      >
+                                        <X className="h-3 w-3 text-muted-foreground" />
+                                      </button>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                              <div className="space-y-2 pt-2 border-t border-border">
+                                <Input
+                                  placeholder="Nueva acción..."
+                                  value={newActionText[domain.id] || ''}
+                                  onChange={(e) =>
+                                    setNewActionText((prev) => ({
+                                      ...prev,
+                                      [domain.id]: e.target.value,
+                                    }))
+                                  }
+                                  onKeyDown={(e) =>
+                                    e.key === 'Enter' && handleAddAction(domain.id)
+                                  }
+                                  className="text-sm"
+                                />
+                                <div className="flex gap-2 flex-wrap">
+                                  <Select
+                                    value={newActionFrequency[domain.id] || 'WEEKLY'}
+                                    onValueChange={(val) =>
+                                      setNewActionFrequency((prev) => ({
+                                        ...prev,
+                                        [domain.id]: val as FrequencyType,
+                                      }))
+                                    }
+                                  >
+                                    <SelectTrigger size="sm" className="w-[120px]">
+                                      <SelectValue placeholder="Frecuencia" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {FREQUENCY_OPTIONS.map((opt) => (
+                                        <SelectItem key={opt.key} value={opt.key}>
+                                          {opt.label}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleAddAction(domain.id)}
+                                  >
+                                    <Plus className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </CollapsibleContent>
+                      </Card>
+                    </Collapsible>
+                  );
+                })}
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       <div className="sticky bottom-16 md:bottom-0 p-4 border-t border-border bg-background">

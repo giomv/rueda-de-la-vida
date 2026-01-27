@@ -75,6 +75,9 @@ export interface ActionItem {
   id: string;
   text: string;
   completed: boolean;
+  frequency_type: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'ONCE';
+  goal_id: string | null;
+  domain_id: string | null;
 }
 
 export interface Habit {
