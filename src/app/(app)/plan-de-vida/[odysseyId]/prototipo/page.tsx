@@ -3,17 +3,29 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ArrowLeft, ArrowRight, Plus, X } from 'lucide-react';
 import { OdysseyProgress } from '@/components/odyssey/OdysseyProgress';
 import { PrototypeSetup } from '@/components/odyssey/PrototypeSetup';
 import { MilestoneSelector } from '@/components/odyssey/MilestoneSelector';
 import { useOdysseyStore } from '@/lib/stores/odyssey-store';
 import {
-  getOdysseyData, createPrototype, savePrototypeSteps, updatePrototypeMilestone,
+  getOdysseyData, createPrototype, savePrototypeSteps, savePrototypeActions, updatePrototypeMilestone,
 } from '@/lib/actions/odyssey-actions';
 import { getOrCreateDomains } from '@/lib/actions/domain-actions';
-import { PLAN_TYPES } from '@/lib/types';
-import type { PrototypeStepType, OdysseyMilestone } from '@/lib/types';
+import { FREQUENCY_OPTIONS } from '@/lib/types';
+import type { PrototypeStepType, OdysseyMilestone, OdysseyPrototypeStep, OdysseyPrototypeAction, FrequencyType } from '@/lib/types';
+
+type StepInput = { step_type: PrototypeStepType; title: string; description: string };
+type ActionInput = { id: string; text: string; frequency_type: FrequencyType };
+
+const DEFAULT_STEPS: StepInput[] = [
+  { step_type: 'conversation', title: '', description: '' },
+  { step_type: 'experiment', title: '', description: '' },
+  { step_type: 'skill', title: '', description: '' },
+];
 
 export default function PrototipoPage() {
   const params = useParams();
@@ -23,13 +35,56 @@ export default function PrototipoPage() {
   const [saving, setSaving] = useState(false);
   const [selectedMilestoneId, setSelectedMilestoneId] = useState<string | null>(null);
   const [planMilestones, setPlanMilestones] = useState<OdysseyMilestone[]>([]);
-  const [steps, setSteps] = useState<{ step_type: PrototypeStepType; title: string; description: string }[]>([
-    { step_type: 'conversation', title: '', description: '' },
-    { step_type: 'experiment', title: '', description: '' },
-    { step_type: 'skill', title: '', description: '' },
-  ]);
+  // Store steps per milestone: milestoneId -> steps
+  const [stepsByMilestone, setStepsByMilestone] = useState<Record<string, StepInput[]>>({});
+  // Store actions per milestone: milestoneId -> actions
+  const [actionsByMilestone, setActionsByMilestone] = useState<Record<string, ActionInput[]>>({});
+  // New action input state
+  const [newActionText, setNewActionText] = useState('');
+  const [newActionFrequency, setNewActionFrequency] = useState<FrequencyType>('WEEKLY');
 
   const { plans, activePlanNumber, prototype, domains, setOdysseyId, hydrate, setDomains } = useOdysseyStore();
+
+  // Get current steps for selected milestone
+  const steps = selectedMilestoneId
+    ? (stepsByMilestone[selectedMilestoneId] || [...DEFAULT_STEPS])
+    : [...DEFAULT_STEPS];
+
+  const setSteps = (newSteps: StepInput[]) => {
+    if (!selectedMilestoneId) return;
+    setStepsByMilestone((prev) => ({
+      ...prev,
+      [selectedMilestoneId]: newSteps,
+    }));
+  };
+
+  // Get current actions for selected milestone
+  const actions = selectedMilestoneId
+    ? (actionsByMilestone[selectedMilestoneId] || [])
+    : [];
+
+  const addAction = () => {
+    if (!selectedMilestoneId || !newActionText.trim()) return;
+    const newAction: ActionInput = {
+      id: crypto.randomUUID(),
+      text: newActionText.trim(),
+      frequency_type: newActionFrequency,
+    };
+    setActionsByMilestone((prev) => ({
+      ...prev,
+      [selectedMilestoneId]: [...(prev[selectedMilestoneId] || []), newAction],
+    }));
+    setNewActionText('');
+    setNewActionFrequency('WEEKLY');
+  };
+
+  const removeAction = (actionId: string) => {
+    if (!selectedMilestoneId) return;
+    setActionsByMilestone((prev) => ({
+      ...prev,
+      [selectedMilestoneId]: (prev[selectedMilestoneId] || []).filter((a) => a.id !== actionId),
+    }));
+  };
 
   useEffect(() => {
     async function load() {
@@ -55,17 +110,39 @@ export default function PrototipoPage() {
         setPlanMilestones(activePlan.milestones);
       }
 
-      // Set selected milestone from existing prototype
-      if (data.prototype?.target_milestone_id) {
-        setSelectedMilestoneId(data.prototype.target_milestone_id);
-      }
-
-      if (data.prototypeSteps.length > 0) {
-        setSteps(data.prototypeSteps.map((s) => ({
+      // Group existing steps by milestone_id
+      const stepsMap: Record<string, StepInput[]> = {};
+      data.prototypeSteps.forEach((s: OdysseyPrototypeStep) => {
+        const key = s.milestone_id || '_legacy';
+        if (!stepsMap[key]) {
+          stepsMap[key] = [];
+        }
+        stepsMap[key].push({
           step_type: s.step_type as PrototypeStepType,
           title: s.title,
           description: s.description || '',
-        })));
+        });
+      });
+      setStepsByMilestone(stepsMap);
+
+      // Group existing actions by milestone_id
+      const actionsMap: Record<string, ActionInput[]> = {};
+      data.prototypeActions.forEach((a: OdysseyPrototypeAction) => {
+        const key = a.milestone_id || '_legacy';
+        if (!actionsMap[key]) {
+          actionsMap[key] = [];
+        }
+        actionsMap[key].push({
+          id: a.id,
+          text: a.text,
+          frequency_type: a.frequency_type,
+        });
+      });
+      setActionsByMilestone(actionsMap);
+
+      // Set selected milestone from existing prototype
+      if (data.prototype?.target_milestone_id) {
+        setSelectedMilestoneId(data.prototype.target_milestone_id);
       }
 
       setLoading(false);
@@ -74,7 +151,6 @@ export default function PrototipoPage() {
   }, [odysseyId]);
 
   const activePlan = plans.find((p) => p.plan_number === activePlanNumber);
-  const planType = activePlanNumber ? PLAN_TYPES.find((p) => p.number === activePlanNumber) : null;
   const selectedMilestone = planMilestones.find((m) => m.id === selectedMilestoneId);
 
   const handleStart = async () => {
@@ -93,7 +169,16 @@ export default function PrototipoPage() {
 
     const validSteps = steps.filter((s) => s.title.trim());
     if (validSteps.length > 0) {
-      await savePrototypeSteps(prototypeId, validSteps);
+      await savePrototypeSteps(prototypeId, validSteps, selectedMilestoneId);
+    }
+
+    // Save actions for this milestone
+    if (actions.length > 0) {
+      await savePrototypeActions(
+        prototypeId,
+        actions.map((a) => ({ text: a.text, frequency_type: a.frequency_type })),
+        selectedMilestoneId
+      );
     }
 
     router.push(`/plan-de-vida/${odysseyId}/prototipo/seguimiento`);
@@ -114,9 +199,9 @@ export default function PrototipoPage() {
 
       <div className="flex-1 p-4 md:p-6 max-w-5xl mx-auto w-full space-y-6">
         <div>
-          <h1 className="text-xl font-bold mb-1">Configura tu Prototipo</h1>
+          <h1 className="text-xl font-bold mb-1">Diseño de vida</h1>
           <p className="text-sm text-muted-foreground">
-            Selecciona un hito y define 3 acciones para prototiparlo durante 30 días.
+            Ahora selecciona uno de tus hitos y genera 3 acciones para acercarte a lograrlo.
           </p>
         </div>
 
@@ -143,19 +228,94 @@ export default function PrototipoPage() {
           />
         </div>
 
-        {/* Prototype Actions */}
+        {/* Prototype Exploration */}
         <div>
-          <h2 className="text-sm font-semibold mb-2">2. Define tus acciones</h2>
+          <h2 className="text-sm font-semibold mb-2">2. Explora tus próximos pasos</h2>
           <p className="text-xs text-muted-foreground mb-3">
             {selectedMilestone ? (
               <>
-                Define 3 acciones para avanzar hacia: <span className="font-medium">&ldquo;{selectedMilestone.title}&rdquo;</span>
+                Responde sobre qué acciones te servirían para llegar a cumplir tu meta: <span className="font-medium">&ldquo;{selectedMilestone.title}&rdquo;</span>
               </>
             ) : (
               'Selecciona un hito arriba para personalizar tus acciones.'
             )}
           </p>
           <PrototypeSetup steps={steps} onChange={setSteps} />
+        </div>
+
+        {/* Specific Actions */}
+        <div>
+          <h2 className="text-sm font-semibold mb-2">3. Define tus acciones</h2>
+          <p className="text-xs text-muted-foreground mb-3">
+            En base a lo que has explorado, define acciones específicas.
+          </p>
+
+          {selectedMilestoneId ? (
+            <Card>
+              <CardContent className="pt-4 space-y-4">
+                {/* Existing actions */}
+                {actions.length > 0 && (
+                  <div className="space-y-2">
+                    {actions.map((action) => {
+                      const freqLabel = FREQUENCY_OPTIONS.find((f) => f.key === action.frequency_type)?.label || action.frequency_type;
+                      return (
+                        <div key={action.id} className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg group">
+                          <span className="flex-1 text-sm">{action.text}</span>
+                          <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
+                            {freqLabel}
+                          </span>
+                          <button
+                            onClick={() => removeAction(action.id)}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 rounded"
+                          >
+                            <X className="h-3 w-3 text-muted-foreground" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Add new action */}
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Nueva acción..."
+                    value={newActionText}
+                    onChange={(e) => setNewActionText(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && addAction()}
+                    className="flex-1"
+                  />
+                  <Select
+                    value={newActionFrequency}
+                    onValueChange={(val) => setNewActionFrequency(val as FrequencyType)}
+                  >
+                    <SelectTrigger className="w-[130px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {FREQUENCY_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.key} value={opt.key}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={addAction}
+                    disabled={!newActionText.trim()}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <p className="text-sm text-muted-foreground italic">
+              Selecciona un hito arriba para definir acciones.
+            </p>
+          )}
         </div>
       </div>
 
@@ -167,7 +327,7 @@ export default function PrototipoPage() {
           </Button>
           <Button
             onClick={handleStart}
-            disabled={saving || steps.every((s) => !s.title.trim()) || (planMilestones.length > 0 && !selectedMilestoneId)}
+            disabled={saving || (steps.every((s) => !s.title.trim()) && actions.length === 0) || (planMilestones.length > 0 && !selectedMilestoneId)}
           >
             {saving ? 'Guardando...' : 'Iniciar 30 días'}
             <ArrowRight className="h-4 w-4 ml-2" />

@@ -65,6 +65,7 @@ export async function getOdysseyData(odysseyId: string): Promise<FullOdysseyData
     { data: feedback },
     { data: prototype },
     { data: prototypeSteps },
+    { data: prototypeActions },
     { data: weeklyChecks },
   ] = await Promise.all([
     supabase.from('odysseys').select('*').eq('id', odysseyId).single(),
@@ -79,6 +80,10 @@ export async function getOdysseyData(odysseyId: string): Promise<FullOdysseyData
     ).order('order_position'),
     supabase.from('odyssey_prototypes').select('*').eq('odyssey_id', odysseyId).maybeSingle(),
     supabase.from('odyssey_prototype_steps').select('*').in(
+      'prototype_id',
+      (await supabase.from('odyssey_prototypes').select('id').eq('odyssey_id', odysseyId)).data?.map(p => p.id) || []
+    ),
+    supabase.from('odyssey_prototype_actions').select('*').in(
       'prototype_id',
       (await supabase.from('odyssey_prototypes').select('id').eq('odyssey_id', odysseyId)).data?.map(p => p.id) || []
     ),
@@ -102,6 +107,7 @@ export async function getOdysseyData(odysseyId: string): Promise<FullOdysseyData
     plans: plansWithData,
     prototype: prototype || null,
     prototypeSteps: prototypeSteps || [],
+    prototypeActions: prototypeActions || [],
     weeklyChecks: weeklyChecks || [],
   };
 }
@@ -432,15 +438,67 @@ export async function updatePrototypeMilestone(prototypeId: string, milestoneId:
   if (error) throw new Error(error.message);
 }
 
-export async function savePrototypeSteps(prototypeId: string, steps: { step_type: string; title: string; description?: string }[]) {
+export async function savePrototypeSteps(
+  prototypeId: string,
+  steps: { step_type: string; title: string; description?: string }[],
+  milestoneId?: string | null
+) {
   const supabase = await createClient();
 
-  await supabase.from('odyssey_prototype_steps').delete().eq('prototype_id', prototypeId);
+  // Delete existing steps for this milestone (or null milestone for legacy)
+  if (milestoneId) {
+    await supabase
+      .from('odyssey_prototype_steps')
+      .delete()
+      .eq('prototype_id', prototypeId)
+      .eq('milestone_id', milestoneId);
+  } else {
+    await supabase
+      .from('odyssey_prototype_steps')
+      .delete()
+      .eq('prototype_id', prototypeId)
+      .is('milestone_id', null);
+  }
 
   if (steps.length > 0) {
     const { error } = await supabase
       .from('odyssey_prototype_steps')
-      .insert(steps.map((s) => ({ ...s, prototype_id: prototypeId })));
+      .insert(steps.map((s) => ({ ...s, prototype_id: prototypeId, milestone_id: milestoneId || null })));
+
+    if (error) throw new Error(error.message);
+  }
+}
+
+export async function savePrototypeActions(
+  prototypeId: string,
+  actions: { text: string; frequency_type: string }[],
+  milestoneId?: string | null
+) {
+  const supabase = await createClient();
+
+  // Delete existing actions for this milestone
+  if (milestoneId) {
+    await supabase
+      .from('odyssey_prototype_actions')
+      .delete()
+      .eq('prototype_id', prototypeId)
+      .eq('milestone_id', milestoneId);
+  } else {
+    await supabase
+      .from('odyssey_prototype_actions')
+      .delete()
+      .eq('prototype_id', prototypeId)
+      .is('milestone_id', null);
+  }
+
+  if (actions.length > 0) {
+    const { error } = await supabase
+      .from('odyssey_prototype_actions')
+      .insert(actions.map((a) => ({
+        ...a,
+        prototype_id: prototypeId,
+        milestone_id: milestoneId || null,
+      })));
 
     if (error) throw new Error(error.message);
   }

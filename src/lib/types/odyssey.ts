@@ -67,6 +67,7 @@ export interface OdysseyPrototype {
 export interface OdysseyPrototypeStep {
   id: string;
   prototype_id: string;
+  milestone_id: string | null;
   step_type: PrototypeStepType;
   title: string;
   description: string | null;
@@ -82,6 +83,16 @@ export interface OdysseyWeeklyCheck {
   skill_done: boolean;
   notes: string | null;
   completed_at: string | null;
+}
+
+export interface OdysseyPrototypeAction {
+  id: string;
+  prototype_id: string;
+  milestone_id: string | null;
+  text: string;
+  frequency_type: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'ONCE';
+  completed: boolean;
+  created_at: string;
 }
 
 export interface SharedOdyssey {
@@ -108,6 +119,7 @@ export interface FullOdysseyData {
   plans: PlanWithMilestones[];
   prototype: OdysseyPrototype | null;
   prototypeSteps: OdysseyPrototypeStep[];
+  prototypeActions: OdysseyPrototypeAction[];
   weeklyChecks: OdysseyWeeklyCheck[];
 }
 

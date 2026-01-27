@@ -44,6 +44,7 @@ export function useOdyssey(odysseyId: string | null) {
         { data: questions },
         { data: prototype },
         { data: prototypeSteps },
+        { data: prototypeActions },
         { data: weeklyChecks },
       ] = await Promise.all([
         supabase
@@ -68,6 +69,12 @@ export function useOdyssey(odysseyId: string | null) {
             (await supabase.from('odyssey_prototypes').select('id').eq('odyssey_id', odysseyId!)).data?.map(p => p.id) || ['_none_']
           ),
         supabase
+          .from('odyssey_prototype_actions')
+          .select('*')
+          .in('prototype_id',
+            (await supabase.from('odyssey_prototypes').select('id').eq('odyssey_id', odysseyId!)).data?.map(p => p.id) || ['_none_']
+          ),
+        supabase
           .from('odyssey_weekly_checks')
           .select('*')
           .in('prototype_id',
@@ -87,6 +94,7 @@ export function useOdyssey(odysseyId: string | null) {
         plans: plansWithData,
         prototype: prototype || null,
         prototypeSteps: prototypeSteps || [],
+        prototypeActions: prototypeActions || [],
         weeklyChecks: weeklyChecks || [],
       });
       setLoading(false);

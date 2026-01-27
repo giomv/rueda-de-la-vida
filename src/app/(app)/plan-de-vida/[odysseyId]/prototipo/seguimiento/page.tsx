@@ -99,28 +99,33 @@ export default function SeguimientoPage() {
           </Badge>
         </div>
 
-        {/* Prototype steps summary */}
-        {prototypeSteps.length > 0 && (
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Mis compromisos</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {prototypeSteps.map((step) => {
-                  const typeInfo = PROTOTYPE_STEP_TYPES.find((t) => t.key === step.step_type);
-                  return (
-                    <div key={step.id} className="flex items-center gap-2 text-sm">
-                      <span>{typeInfo?.icon}</span>
-                      <span className="font-medium">{typeInfo?.label}:</span>
-                      <span className="text-muted-foreground">{step.title}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {/* Prototype steps summary - filter by target milestone */}
+        {(() => {
+          const filteredSteps = prototypeSteps.filter(
+            (s) => s.milestone_id === prototype?.target_milestone_id || (!s.milestone_id && !prototype?.target_milestone_id)
+          );
+          return filteredSteps.length > 0 ? (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Mis compromisos</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {filteredSteps.map((step) => {
+                    const typeInfo = PROTOTYPE_STEP_TYPES.find((t) => t.key === step.step_type);
+                    return (
+                      <div key={step.id} className="flex items-center gap-2 text-sm">
+                        <span>{typeInfo?.icon}</span>
+                        <span className="font-medium">{typeInfo?.label}:</span>
+                        <span className="text-muted-foreground">{step.title}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          ) : null;
+        })()}
 
         <WeeklyChecklist
           weeklyChecks={weeklyChecks}
