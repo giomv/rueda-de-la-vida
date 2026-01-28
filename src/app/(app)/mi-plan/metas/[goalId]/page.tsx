@@ -93,7 +93,7 @@ export default function GoalDetailPage() {
   };
 
   const handleDelete = async () => {
-    if (!confirm('¿Estás seguro de eliminar esta meta? Las actividades vinculadas no se eliminarán.')) {
+    if (!confirm('¿Estás seguro de eliminar esta meta? Las acciones vinculadas no se eliminarán.')) {
       return;
     }
 
@@ -240,7 +240,7 @@ export default function GoalDetailPage() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base">Actividades vinculadas</CardTitle>
+            <CardTitle className="text-base">Acciones vinculadas</CardTitle>
             <Button
               variant="outline"
               size="sm"
@@ -254,7 +254,7 @@ export default function GoalDetailPage() {
         <CardContent>
           {goal.activities.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">
-              No hay actividades vinculadas a esta meta
+              No hay acciones vinculadas a esta meta
             </p>
           ) : (
             <div className="space-y-2">

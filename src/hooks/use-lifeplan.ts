@@ -3,12 +3,15 @@
 import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useLifePlanStore } from '@/lib/stores/lifeplan-store';
-import type { ActivityWithCompletions, Goal, WeeklyCheckin } from '@/lib/types/lifeplan';
+import type { ActivityWithCompletions, Goal, WeeklyCheckin, FrequencyType } from '@/lib/types/lifeplan';
 import type { LifeDomain } from '@/lib/types';
 
 // Format date as YYYY-MM-DD
 function formatDate(date: Date): string {
-  return date.toISOString().split('T')[0];
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 // Get start of week (Monday)
@@ -39,6 +42,36 @@ function getEndOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth() + 1, 0);
 }
 
+// Period key utilities
+function getISOWeek(date: Date): number {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+  const week1 = new Date(d.getFullYear(), 0, 4);
+  return 1 + Math.round(
+    ((d.getTime() - week1.getTime()) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7
+  );
+}
+
+function getISOWeekYear(date: Date): number {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+  return d.getFullYear();
+}
+
+function getWeekKey(date: Date): string {
+  const weekYear = getISOWeekYear(date);
+  const weekNum = getISOWeek(date);
+  return `${weekYear}-W${String(weekNum).padStart(2, '0')}`;
+}
+
+function getMonthKey(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}`;
+}
+
 export function useLifePlan() {
   const store = useLifePlanStore();
   const [loading, setLoading] = useState(true);
@@ -57,29 +90,43 @@ export function useLifePlan() {
         return;
       }
 
-      // Calculate date range based on view mode
+      // Calculate date range and period keys based on view mode
       let startDate: string;
       let endDate: string;
+      const periodKeys: string[] = [];
 
       switch (store.viewMode) {
         case 'week':
           startDate = formatDate(getStartOfWeek(store.viewDate));
           endDate = formatDate(getEndOfWeek(store.viewDate));
+          periodKeys.push(getWeekKey(store.viewDate));
+          periodKeys.push(getMonthKey(store.viewDate));
           break;
         case 'month':
           startDate = formatDate(getStartOfMonth(store.viewDate));
           endDate = formatDate(getEndOfMonth(store.viewDate));
+          periodKeys.push(getMonthKey(store.viewDate));
+          break;
+        case 'once':
+          // For once view, fetch all ONCE completions
+          startDate = '1970-01-01';
+          endDate = '2099-12-31';
           break;
         case 'day':
         default:
           startDate = formatDate(store.viewDate);
           endDate = formatDate(store.viewDate);
+          periodKeys.push(formatDate(store.viewDate));
+          periodKeys.push(getWeekKey(store.viewDate));
+          periodKeys.push(getMonthKey(store.viewDate));
       }
 
-      // Fetch all data in parallel
+      // Always include ONCE period key
+      periodKeys.push('ONCE');
+
+      // Fetch activities first
       const [
         { data: activities, error: activitiesError },
-        { data: completions, error: completionsError },
         { data: goals, error: goalsError },
         { data: domains, error: domainsError },
       ] = await Promise.all([
@@ -89,11 +136,6 @@ export function useLifePlan() {
           .eq('user_id', user.id)
           .eq('is_archived', false)
           .order('order_position'),
-        supabase
-          .from('activity_completions')
-          .select('*')
-          .gte('date', startDate)
-          .lte('date', endDate),
         supabase
           .from('goals')
           .select('*')
@@ -111,8 +153,31 @@ export function useLifePlan() {
       if (goalsError) throw new Error(goalsError.message);
       if (domainsError) throw new Error(domainsError.message);
 
-      // Filter completions to only those belonging to user's activities
       const activityIds = (activities || []).map((a) => a.id);
+
+      // Build period keys for daily activities in the date range
+      if (store.viewMode !== 'once') {
+        const current = new Date(startDate + 'T00:00:00');
+        const end = new Date(endDate + 'T00:00:00');
+        while (current <= end) {
+          const dayKey = formatDate(current);
+          if (!periodKeys.includes(dayKey)) {
+            periodKeys.push(dayKey);
+          }
+          current.setDate(current.getDate() + 1);
+        }
+      }
+
+      // Fetch completions by period keys
+      const { data: completions, error: completionsError } = await supabase
+        .from('activity_completions')
+        .select('*')
+        .in('activity_id', activityIds)
+        .in('period_key', periodKeys);
+
+      if (completionsError) throw new Error(completionsError.message);
+
+      // Filter completions to only those belonging to user's activities
       const userCompletions = (completions || []).filter((c) =>
         activityIds.includes(c.activity_id)
       );

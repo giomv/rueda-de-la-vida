@@ -6,6 +6,7 @@ import { ChevronLeft, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ActivityForm } from '@/components/lifeplan';
 import { getActivity, deleteActivity } from '@/lib/actions/lifeplan-actions';
+import { syncLifePlanActivities } from '@/lib/actions/import-actions';
 import { createClient } from '@/lib/supabase/client';
 import type { LifePlanActivity } from '@/lib/types/lifeplan';
 import type { LifeDomain, Goal } from '@/lib/types';
@@ -31,6 +32,9 @@ export default function EditActivityPage() {
       }
 
       try {
+        // Sync goals from wheel and odyssey before loading
+        await syncLifePlanActivities();
+
         const [activityData, { data: domainsData }, { data: goalsData }] = await Promise.all([
           getActivity(activityId),
           supabase
@@ -61,7 +65,7 @@ export default function EditActivityPage() {
   }, [activityId, router]);
 
   const handleDelete = async () => {
-    if (!confirm('¿Estás seguro de eliminar esta actividad? Se perderán todos los registros de completado.')) {
+    if (!confirm('¿Estás seguro de eliminar esta acción? Se perderán todos los registros de completado.')) {
       return;
     }
 
@@ -90,7 +94,7 @@ export default function EditActivityPage() {
   if (!activity) {
     return (
       <div className="container max-w-2xl mx-auto px-4 py-8 text-center">
-        <p className="text-muted-foreground mb-4">Actividad no encontrada</p>
+        <p className="text-muted-foreground mb-4">Acción no encontrada</p>
         <Button onClick={() => router.push('/mi-plan/hoy')}>Volver</Button>
       </div>
     );
@@ -104,7 +108,7 @@ export default function EditActivityPage() {
           <Button variant="ghost" size="icon" onClick={() => router.back()}>
             <ChevronLeft className="w-5 h-5" />
           </Button>
-          <h1 className="text-xl font-bold">Editar Actividad</h1>
+          <h1 className="text-xl font-bold">Editar Acción</h1>
         </div>
 
         <Button

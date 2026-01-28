@@ -39,7 +39,7 @@ export default function ConfiguracionPage() {
   }, []);
 
   const handleDeleteArchived = async () => {
-    if (!confirm(`¿Estás seguro de eliminar ${archivedActivities.length} actividades archivadas? Esta acción no se puede deshacer.`)) {
+    if (!confirm(`¿Estás seguro de eliminar ${archivedActivities.length} acciones archivadas? Esta acción no se puede deshacer.`)) {
       return;
     }
 
@@ -78,7 +78,7 @@ export default function ConfiguracionPage() {
             Sincronización
           </CardTitle>
           <CardDescription>
-            Importa actividades desde Rueda de la Vida y Plan de Vida (Odyssey)
+            Importa acciones desde Rueda de la Vida y Plan de vida
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -86,15 +86,15 @@ export default function ConfiguracionPage() {
             <div className="bg-muted rounded-lg p-4 space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Desde Rueda:</span>
-                <span className="font-medium">{importStatus.fromWheel} actividades</span>
+                <span className="font-medium">{importStatus.fromWheel} acciones</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Desde Odyssey:</span>
-                <span className="font-medium">{importStatus.fromOdyssey} actividades</span>
+                <span className="text-muted-foreground">Desde Plan de vida:</span>
+                <span className="font-medium">{importStatus.fromOdyssey} acciones</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Creadas manualmente:</span>
-                <span className="font-medium">{importStatus.manual} actividades</span>
+                <span className="font-medium">{importStatus.manual} acciones</span>
               </div>
             </div>
           )}
@@ -111,10 +111,10 @@ export default function ConfiguracionPage() {
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <Archive className="w-5 h-5" />
-            Actividades archivadas
+            Acciones archivadas
           </CardTitle>
           <CardDescription>
-            {archivedActivities.length} actividades en archivo
+            {archivedActivities.length} acciones en archivo
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -129,7 +129,7 @@ export default function ConfiguracionPage() {
             </Button>
           ) : (
             <p className="text-sm text-muted-foreground text-center py-4">
-              No hay actividades archivadas
+              No hay acciones archivadas
             </p>
           )}
         </CardContent>
@@ -167,7 +167,7 @@ export default function ConfiguracionPage() {
             className="w-full justify-start"
             onClick={() => router.push('/plan-de-vida')}
           >
-            Plan de Vida (Odyssey)
+            Plan de vida
           </Button>
         </CardContent>
       </Card>

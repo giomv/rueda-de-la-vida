@@ -6,6 +6,7 @@ import { ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ActivityForm } from '@/components/lifeplan';
 import { createClient } from '@/lib/supabase/client';
+import { syncLifePlanActivities } from '@/lib/actions/import-actions';
 import type { LifeDomain, Goal } from '@/lib/types';
 
 export default function NuevaActividadPage() {
@@ -22,6 +23,9 @@ export default function NuevaActividadPage() {
         router.push('/iniciar-sesion');
         return;
       }
+
+      // Sync goals from wheel and odyssey before loading
+      await syncLifePlanActivities();
 
       const [{ data: domainsData }, { data: goalsData }] = await Promise.all([
         supabase
@@ -64,7 +68,7 @@ export default function NuevaActividadPage() {
         <Button variant="ghost" size="icon" onClick={() => router.back()}>
           <ChevronLeft className="w-5 h-5" />
         </Button>
-        <h1 className="text-xl font-bold">Nueva Actividad</h1>
+        <h1 className="text-xl font-bold">Nueva Acción</h1>
       </div>
 
       {/* Form */}

@@ -13,8 +13,53 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { OriginBadge } from './OriginBadge';
-import type { ActivityWithCompletions } from '@/lib/types/lifeplan';
+import type { ActivityWithCompletions, FrequencyType } from '@/lib/types/lifeplan';
 import type { LifeDomain } from '@/lib/types';
+
+// Period key utilities (inline for client components)
+function getISOWeek(date: Date): number {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+  const week1 = new Date(d.getFullYear(), 0, 4);
+  return 1 + Math.round(
+    ((d.getTime() - week1.getTime()) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7
+  );
+}
+
+function getISOWeekYear(date: Date): number {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+  return d.getFullYear();
+}
+
+function getWeekKey(date: Date): string {
+  return `${getISOWeekYear(date)}-W${String(getISOWeek(date)).padStart(2, '0')}`;
+}
+
+function getMonthKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function getDayKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function getPeriodKey(frequencyType: FrequencyType, date: Date): string {
+  switch (frequencyType) {
+    case 'DAILY': return getDayKey(date);
+    case 'WEEKLY': return getWeekKey(date);
+    case 'MONTHLY': return getMonthKey(date);
+    case 'ONCE': return 'ONCE';
+    default: return getDayKey(date);
+  }
+}
+
+function parseLocalDate(dateStr: string): Date {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
 
 interface ActivityCardProps {
   activity: ActivityWithCompletions;
@@ -41,7 +86,10 @@ export function ActivityCard({
 }: ActivityCardProps) {
   const [isUpdating, setIsUpdating] = useState(false);
 
-  const completion = activity.completions.find((c) => c.date === date);
+  // Use period key based on activity frequency for completion check
+  const dateObj = parseLocalDate(date);
+  const periodKey = getPeriodKey(activity.frequency_type as FrequencyType, dateObj);
+  const completion = activity.completions.find((c) => c.period_key === periodKey);
   const isCompleted = completion?.completed || false;
 
   const handleToggle = async () => {

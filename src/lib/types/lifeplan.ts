@@ -2,7 +2,7 @@
 
 export type SourceType = 'WHEEL' | 'ODYSSEY' | 'MANUAL';
 export type FrequencyType = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'ONCE';
-export type ViewMode = 'day' | 'week' | 'month';
+export type ViewMode = 'day' | 'week' | 'month' | 'once';
 export type FilterType = 'all' | 'domain' | 'goal' | 'uncategorized';
 
 export interface Goal {
@@ -43,6 +43,7 @@ export interface ActivityCompletion {
   id: string;
   activity_id: string;
   date: string;
+  period_key: string;
   completed: boolean;
   completed_at: string | null;
   notes: string | null;
@@ -128,10 +129,11 @@ export const VIEW_TABS: { key: ViewMode; label: string; href: string }[] = [
   { key: 'day', label: 'Hoy', href: '/mi-plan/hoy' },
   { key: 'week', label: 'Semana', href: '/mi-plan/semana' },
   { key: 'month', label: 'Mes', href: '/mi-plan/mes' },
+  { key: 'once', label: '1 vez', href: '/mi-plan/una-vez' },
 ];
 
 export const ORIGIN_BADGES: { key: SourceType; label: string; color: string }[] = [
   { key: 'WHEEL', label: 'Rueda', color: 'blue' },
-  { key: 'ODYSSEY', label: 'Odyssey', color: 'purple' },
+  { key: 'ODYSSEY', label: 'Plan de vida', color: 'purple' },
   { key: 'MANUAL', label: 'Manual', color: 'gray' },
 ];

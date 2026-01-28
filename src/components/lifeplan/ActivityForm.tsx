@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,16 +9,28 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Plus } from 'lucide-react';
 import { FrequencySelector } from './FrequencySelector';
 import { createActivity, updateActivity } from '@/lib/actions/lifeplan-actions';
+import { createGoal } from '@/lib/actions/goal-actions';
 import { cn } from '@/lib/utils';
-import type { LifePlanActivity, FrequencyType, CreateActivityInput } from '@/lib/types/lifeplan';
-import type { LifeDomain, Goal } from '@/lib/types';
+import type { LifePlanActivity, FrequencyType, CreateActivityInput, SourceType, Goal } from '@/lib/types/lifeplan';
+import type { LifeDomain } from '@/lib/types';
 
 interface ActivityFormProps {
   activity?: LifePlanActivity;
@@ -26,8 +38,20 @@ interface ActivityFormProps {
   goals: Goal[];
   onSave?: (activity: LifePlanActivity) => void;
   onCancel?: () => void;
+  onGoalCreated?: (goal: Goal) => void;
   className?: string;
 }
+
+const getOriginSuffix = (origin: SourceType): string => {
+  switch (origin) {
+    case 'ODYSSEY':
+      return ' (PV)';
+    case 'WHEEL':
+      return ' (RV)';
+    default:
+      return '';
+  }
+};
 
 export function ActivityForm({
   activity,
@@ -35,6 +59,7 @@ export function ActivityForm({
   goals,
   onSave,
   onCancel,
+  onGoalCreated,
   className,
 }: ActivityFormProps) {
   const router = useRouter();
@@ -57,10 +82,49 @@ export function ActivityForm({
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // New goal dialog state
+  const [showNewGoalDialog, setShowNewGoalDialog] = useState(false);
+  const [newGoalTitle, setNewGoalTitle] = useState('');
+  const [newGoalMetric, setNewGoalMetric] = useState('');
+  const [creatingGoal, setCreatingGoal] = useState(false);
+
   // Filter goals by selected domain
   const filteredGoals = domainId
     ? goals.filter((g) => g.domain_id === domainId || !g.domain_id)
     : goals;
+
+  const handleGoalSelection = (value: string) => {
+    if (value === 'none') {
+      setGoalId(null);
+    } else if (value === 'new') {
+      setShowNewGoalDialog(true);
+    } else {
+      setGoalId(value);
+    }
+  };
+
+  const handleCreateGoal = async () => {
+    if (!newGoalTitle.trim()) return;
+
+    setCreatingGoal(true);
+    try {
+      const newGoal = await createGoal({
+        title: newGoalTitle.trim(),
+        domain_id: domainId,
+        metric: newGoalMetric.trim() || undefined,
+      });
+
+      setGoalId(newGoal.id);
+      onGoalCreated?.(newGoal);
+      setShowNewGoalDialog(false);
+      setNewGoalTitle('');
+      setNewGoalMetric('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al crear meta');
+    } finally {
+      setCreatingGoal(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -178,18 +242,31 @@ export function ActivityForm({
             <Label>Meta relacionada (opcional)</Label>
             <Select
               value={goalId || 'none'}
-              onValueChange={(value) => setGoalId(value === 'none' ? null : value)}
+              onValueChange={handleGoalSelection}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Seleccionar meta" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">Sin meta</SelectItem>
-                {filteredGoals.map((goal) => (
-                  <SelectItem key={goal.id} value={goal.id}>
-                    {goal.title}
-                  </SelectItem>
-                ))}
+                <SelectSeparator />
+                <SelectItem value="new">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nueva meta
+                </SelectItem>
+                {filteredGoals.length > 0 && (
+                  <>
+                    <SelectSeparator />
+                    <SelectGroup>
+                      <SelectLabel>Metas actuales</SelectLabel>
+                      {filteredGoals.map((goal) => (
+                        <SelectItem key={goal.id} value={goal.id}>
+                          {goal.title}{getOriginSuffix(goal.origin)}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </>
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -245,9 +322,59 @@ export function ActivityForm({
           Cancelar
         </Button>
         <Button type="submit" disabled={isSaving} className="flex-1">
-          {isSaving ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Crear actividad'}
+          {isSaving ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Crear acción'}
         </Button>
       </div>
+
+      {/* New Goal Dialog */}
+      <Dialog open={showNewGoalDialog} onOpenChange={setShowNewGoalDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nueva meta</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="newGoalTitle">Título *</Label>
+              <Input
+                id="newGoalTitle"
+                value={newGoalTitle}
+                onChange={(e) => setNewGoalTitle(e.target.value)}
+                placeholder="Ej: Correr un maratón"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="newGoalMetric">Métrica (opcional)</Label>
+              <Input
+                id="newGoalMetric"
+                value={newGoalMetric}
+                onChange={(e) => setNewGoalMetric(e.target.value)}
+                placeholder="Ej: 42 km en menos de 4 horas"
+              />
+            </div>
+            {domainId && (
+              <p className="text-xs text-muted-foreground">
+                Esta meta se vinculará al dominio seleccionado.
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowNewGoalDialog(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={handleCreateGoal}
+              disabled={creatingGoal || !newGoalTitle.trim()}
+            >
+              {creatingGoal ? 'Creando...' : 'Crear meta'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </form>
   );
 }

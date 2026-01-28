@@ -139,7 +139,7 @@ export default function PlanPage() {
         actions: plan.actions,
       });
     }
-    router.push(`/rueda/${wheelId}/seguimiento`);
+    router.push('/mi-plan');
   };
 
   if (loading) {

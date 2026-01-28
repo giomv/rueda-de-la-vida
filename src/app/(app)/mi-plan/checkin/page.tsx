@@ -137,7 +137,7 @@ export default function CheckinPage() {
 
           {weekTotal === 0 ? (
             <p className="text-sm text-muted-foreground mt-4 text-center">
-              No hay actividades registradas para esta semana
+              No hay acciones registradas para esta semana
             </p>
           ) : (
             <div className="grid grid-cols-2 gap-4 mt-4">

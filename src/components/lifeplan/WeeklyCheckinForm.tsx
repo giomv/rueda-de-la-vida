@@ -86,7 +86,7 @@ export function WeeklyCheckinForm({
               id="whatWorked"
               value={whatWorked}
               onChange={(e) => setWhatWorked(e.target.value)}
-              placeholder="Ej: Logré meditar 3 días seguidos, completé todas mis actividades de ejercicio..."
+              placeholder="Ej: Logré meditar 3 días seguidos, completé todas mis acciones de ejercicio..."
               rows={4}
             />
           </div>
@@ -104,7 +104,7 @@ export function WeeklyCheckinForm({
               id="whatToAdjust"
               value={whatToAdjust}
               onChange={(e) => setWhatToAdjust(e.target.value)}
-              placeholder="Ej: Voy a poner recordatorios para las actividades de la mañana, reduciré el número de actividades diarias..."
+              placeholder="Ej: Voy a poner recordatorios para las acciones de la mañana, reduciré el número de acciones diarias..."
               rows={4}
             />
           </div>

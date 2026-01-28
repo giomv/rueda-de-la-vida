@@ -9,7 +9,10 @@ import { useLifePlan, useLifePlanSync } from '@/hooks/use-lifeplan';
 import { useLifePlanStore } from '@/lib/stores/lifeplan-store';
 
 function formatDate(date: Date): string {
-  return date.toISOString().split('T')[0];
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 export default function HoyPage() {
@@ -138,7 +141,7 @@ export default function HoyPage() {
       {/* Sync notification */}
       {lastSyncResult && (lastSyncResult.fromWheel > 0 || lastSyncResult.fromOdyssey > 0) && (
         <div className="mb-4 p-3 bg-primary/10 text-primary text-sm rounded-lg">
-          Se importaron {lastSyncResult.fromWheel + lastSyncResult.fromOdyssey} actividades desde Rueda/Odyssey
+          Se importaron {lastSyncResult.fromWheel + lastSyncResult.fromOdyssey} acciones desde Rueda/Plan de vida
         </div>
       )}
 

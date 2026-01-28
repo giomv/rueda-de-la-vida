@@ -8,7 +8,52 @@ import { ProgressRing } from './ProgressRing';
 import { cn } from '@/lib/utils';
 import { useLifePlanStore } from '@/lib/stores/lifeplan-store';
 import { toggleCompletion, archiveActivity, deleteActivity } from '@/lib/actions/lifeplan-actions';
-import type { ActivityWithCompletions } from '@/lib/types/lifeplan';
+import type { ActivityWithCompletions, FrequencyType } from '@/lib/types/lifeplan';
+
+// Period key utilities (inline for client components)
+function getISOWeek(date: Date): number {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+  const week1 = new Date(d.getFullYear(), 0, 4);
+  return 1 + Math.round(
+    ((d.getTime() - week1.getTime()) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7
+  );
+}
+
+function getISOWeekYear(date: Date): number {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+  return d.getFullYear();
+}
+
+function getWeekKey(date: Date): string {
+  return `${getISOWeekYear(date)}-W${String(getISOWeek(date)).padStart(2, '0')}`;
+}
+
+function getMonthKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function getDayKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function getPeriodKey(frequencyType: FrequencyType, date: Date): string {
+  switch (frequencyType) {
+    case 'DAILY': return getDayKey(date);
+    case 'WEEKLY': return getWeekKey(date);
+    case 'MONTHLY': return getMonthKey(date);
+    case 'ONCE': return 'ONCE';
+    default: return getDayKey(date);
+  }
+}
+
+function parseLocalDate(dateStr: string): Date {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
 
 interface ActivityListProps {
   date: string;
@@ -19,10 +64,13 @@ interface ActivityListProps {
 export function ActivityList({ date, activities, className }: ActivityListProps) {
   const router = useRouter();
   const { domains, toggleActivityCompletion } = useLifePlanStore();
+  const dateObj = parseLocalDate(date);
 
-  const completedCount = activities.filter((a) =>
-    a.completions.some((c) => c.date === date && c.completed)
-  ).length;
+  // Count completions based on period key for each activity's frequency type
+  const completedCount = activities.filter((a) => {
+    const periodKey = getPeriodKey(a.frequency_type as FrequencyType, dateObj);
+    return a.completions.some((c) => c.period_key === periodKey && c.completed);
+  }).length;
 
   const handleToggleComplete = async (activityId: string, targetDate: string) => {
     const completion = await toggleCompletion(activityId, targetDate);
@@ -39,7 +87,7 @@ export function ActivityList({ date, activities, className }: ActivityListProps)
   };
 
   const handleDelete = async (activityId: string) => {
-    if (confirm('¿Estás seguro de eliminar esta actividad?')) {
+    if (confirm('¿Estás seguro de eliminar esta acción?')) {
       await deleteActivity(activityId);
       // Refresh will happen through the hook
     }
@@ -78,13 +126,13 @@ export function ActivityList({ date, activities, className }: ActivityListProps)
     return (
       <div className={cn('text-center py-12', className)}>
         <CalendarDays className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
-        <h3 className="text-lg font-medium mb-2">Sin actividades</h3>
+        <h3 className="text-lg font-medium mb-2">Sin acciones</h3>
         <p className="text-muted-foreground mb-4">
-          No tienes actividades programadas para {formatDateDisplay(date).toLowerCase()}.
+          No tienes acciones programadas para {formatDateDisplay(date).toLowerCase()}.
         </p>
         <Button onClick={() => router.push('/mi-plan/actividad/nueva')}>
           <Plus className="w-4 h-4 mr-2" />
-          Crear actividad
+          Crear acción
         </Button>
       </div>
     );
@@ -128,7 +176,7 @@ export function ActivityList({ date, activities, className }: ActivityListProps)
         onClick={() => router.push('/mi-plan/actividad/nueva')}
       >
         <Plus className="w-4 h-4 mr-2" />
-        Agregar actividad
+        Agregar acción
       </Button>
     </div>
   );

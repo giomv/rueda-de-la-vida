@@ -11,7 +11,7 @@ interface OriginBadgeProps {
 
 const ORIGIN_CONFIG: Record<SourceType, { label: string; variant: 'default' | 'secondary' | 'outline' }> = {
   WHEEL: { label: 'Rueda', variant: 'default' },
-  ODYSSEY: { label: 'Odyssey', variant: 'secondary' },
+  ODYSSEY: { label: 'Plan de vida', variant: 'secondary' },
   MANUAL: { label: 'Manual', variant: 'outline' },
 };
 

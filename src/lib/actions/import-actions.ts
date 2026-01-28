@@ -198,6 +198,75 @@ export async function importFromOdyssey(prototypeId: string): Promise<number> {
   return importedCount;
 }
 
+// Import goals from odyssey milestones (active plan only)
+export async function importGoalsFromOdyssey(odysseyId: string): Promise<number> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('No autenticado');
+
+  // Verify odyssey belongs to user
+  const { data: odyssey } = await supabase
+    .from('odysseys')
+    .select('id, active_plan_number')
+    .eq('id', odysseyId)
+    .eq('user_id', user.id)
+    .single();
+
+  if (!odyssey || !odyssey.active_plan_number) return 0;
+
+  // Get the active plan
+  const { data: activePlan } = await supabase
+    .from('odyssey_plans')
+    .select('id')
+    .eq('odyssey_id', odysseyId)
+    .eq('plan_number', odyssey.active_plan_number)
+    .single();
+
+  if (!activePlan) return 0;
+
+  // Get milestones from active plan
+  const { data: milestones } = await supabase
+    .from('odyssey_milestones')
+    .select('id, title, domain_id, year')
+    .eq('plan_id', activePlan.id)
+    .order('year', { ascending: true })
+    .order('order_position', { ascending: true });
+
+  if (!milestones?.length) return 0;
+
+  let importedCount = 0;
+
+  for (const milestone of milestones) {
+    // Check if goal already exists from this odyssey with same title
+    const { data: existingGoal } = await supabase
+      .from('goals')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('origin', 'ODYSSEY')
+      .eq('source_odyssey_id', odysseyId)
+      .eq('title', milestone.title)
+      .single();
+
+    if (existingGoal) continue;
+
+    // Create goal from milestone
+    const { error } = await supabase
+      .from('goals')
+      .insert({
+        user_id: user.id,
+        title: milestone.title,
+        domain_id: milestone.domain_id || null,
+        metric: `Año ${milestone.year}`,
+        origin: 'ODYSSEY',
+        source_odyssey_id: odysseyId,
+      });
+
+    if (!error) importedCount++;
+  }
+
+  return importedCount;
+}
+
 // Sync all activities from Wheel and Odyssey sources
 export async function syncLifePlanActivities(): Promise<ImportResult> {
   const supabase = await createClient();
@@ -215,6 +284,18 @@ export async function syncLifePlanActivities(): Promise<ImportResult> {
   if (wheels?.length) {
     for (const wheel of wheels) {
       results.fromWheel += await importFromWheel(wheel.id);
+    }
+  }
+
+  // Import goals from odyssey milestones
+  const { data: odysseys } = await supabase
+    .from('odysseys')
+    .select('id')
+    .eq('user_id', user.id);
+
+  if (odysseys?.length) {
+    for (const odyssey of odysseys) {
+      await importGoalsFromOdyssey(odyssey.id);
     }
   }
 

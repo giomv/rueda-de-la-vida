@@ -135,7 +135,7 @@ export function GoalCard({
               <OriginBadge origin={goal.origin} />
               {activityCount > 0 && (
                 <span className="text-xs text-muted-foreground">
-                  {activityCount} {activityCount === 1 ? 'actividad' : 'actividades'}
+                  {activityCount} {activityCount === 1 ? 'acción' : 'acciones'}
                 </span>
               )}
             </div>

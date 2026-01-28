@@ -8,9 +8,61 @@ import type {
   CreateActivityInput,
   UpdateActivityInput,
   ActivityWithCompletions,
+  FrequencyType,
 } from '@/lib/types/lifeplan';
 
+// Period key calculation utilities (inline to avoid import issues with 'use server')
+function getISOWeek(date: Date): number {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+  const week1 = new Date(d.getFullYear(), 0, 4);
+  return 1 + Math.round(
+    ((d.getTime() - week1.getTime()) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7
+  );
+}
+
+function getISOWeekYear(date: Date): number {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+  return d.getFullYear();
+}
+
+function getWeekKey(date: Date): string {
+  const weekYear = getISOWeekYear(date);
+  const weekNum = getISOWeek(date);
+  return `${weekYear}-W${String(weekNum).padStart(2, '0')}`;
+}
+
+function getMonthKey(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}`;
+}
+
+function getPeriodKey(frequencyType: FrequencyType, date: Date): string {
+  switch (frequencyType) {
+    case 'DAILY':
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    case 'WEEKLY':
+      return getWeekKey(date);
+    case 'MONTHLY':
+      return getMonthKey(date);
+    case 'ONCE':
+      return 'ONCE';
+    default:
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  }
+}
+
+function parseLocalDate(dateStr: string): Date {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
 // Get activities for a date range with their completions
+// For period-based completion tracking, we need to fetch completions by period_key
 export async function getActivitiesForDateRange(startDate: string, endDate: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -28,14 +80,43 @@ export async function getActivitiesForDateRange(startDate: string, endDate: stri
 
   if (!activities?.length) return [];
 
-  // Get completions for the date range
   const activityIds = activities.map((a) => a.id);
+
+  // Calculate all relevant period keys for the date range
+  const startDateObj = parseLocalDate(startDate);
+  const endDateObj = parseLocalDate(endDate);
+
+  // Get period keys for the range
+  const periodKeys: string[] = [];
+
+  // Add daily period keys
+  const current = new Date(startDateObj);
+  while (current <= endDateObj) {
+    periodKeys.push(getPeriodKey('DAILY', current));
+    current.setDate(current.getDate() + 1);
+  }
+
+  // Add weekly period key for start and end dates
+  const startWeekKey = getWeekKey(startDateObj);
+  const endWeekKey = getWeekKey(endDateObj);
+  if (!periodKeys.includes(startWeekKey)) periodKeys.push(startWeekKey);
+  if (startWeekKey !== endWeekKey && !periodKeys.includes(endWeekKey)) periodKeys.push(endWeekKey);
+
+  // Add monthly period key for start and end dates
+  const startMonthKey = getMonthKey(startDateObj);
+  const endMonthKey = getMonthKey(endDateObj);
+  if (!periodKeys.includes(startMonthKey)) periodKeys.push(startMonthKey);
+  if (startMonthKey !== endMonthKey && !periodKeys.includes(endMonthKey)) periodKeys.push(endMonthKey);
+
+  // Always include ONCE period key
+  periodKeys.push('ONCE');
+
+  // Get completions for the relevant period keys
   const { data: completions, error: completionsError } = await supabase
     .from('activity_completions')
     .select('*')
     .in('activity_id', activityIds)
-    .gte('date', startDate)
-    .lte('date', endDate);
+    .in('period_key', periodKeys);
 
   if (completionsError) throw new Error(completionsError.message);
 
@@ -152,27 +233,32 @@ export async function deleteActivity(activityId: string) {
 }
 
 // Toggle activity completion for a specific date
+// The period_key is computed based on the activity's frequency type
 export async function toggleCompletion(activityId: string, date: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('No autenticado');
 
-  // Verify the activity belongs to the user
+  // Get the activity to determine frequency type
   const { data: activity } = await supabase
     .from('lifeplan_activities')
-    .select('id')
+    .select('id, frequency_type')
     .eq('id', activityId)
     .eq('user_id', user.id)
     .single();
 
-  if (!activity) throw new Error('Actividad no encontrada');
+  if (!activity) throw new Error('Acción no encontrada');
 
-  // Check if completion exists
+  // Calculate period_key based on frequency type
+  const dateObj = parseLocalDate(date);
+  const periodKey = getPeriodKey(activity.frequency_type as FrequencyType, dateObj);
+
+  // Check if completion exists for this period
   const { data: existing } = await supabase
     .from('activity_completions')
     .select('*')
     .eq('activity_id', activityId)
-    .eq('date', date)
+    .eq('period_key', periodKey)
     .single();
 
   if (existing) {
@@ -182,6 +268,7 @@ export async function toggleCompletion(activityId: string, date: string) {
       .update({
         completed: !existing.completed,
         completed_at: !existing.completed ? new Date().toISOString() : null,
+        date, // Update date to the most recent interaction
       })
       .eq('id', existing.id)
       .select()
@@ -196,6 +283,7 @@ export async function toggleCompletion(activityId: string, date: string) {
       .insert({
         activity_id: activityId,
         date,
+        period_key: periodKey,
         completed: true,
         completed_at: new Date().toISOString(),
       })
@@ -221,7 +309,7 @@ export async function updateCompletionNotes(activityId: string, date: string, no
     .eq('user_id', user.id)
     .single();
 
-  if (!activity) throw new Error('Actividad no encontrada');
+  if (!activity) throw new Error('Acción no encontrada');
 
   const { data, error } = await supabase
     .from('activity_completions')

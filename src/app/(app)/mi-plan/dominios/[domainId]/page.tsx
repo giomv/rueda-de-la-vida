@@ -163,7 +163,7 @@ export default function DomainDetailPage() {
             <div>
               <p className="text-lg font-medium">Progreso de hoy</p>
               <p className="text-sm text-muted-foreground">
-                {completedToday} de {activities.length} actividades completadas
+                {completedToday} de {activities.length} acciones completadas
               </p>
             </div>
             <ProgressRing completed={completedToday} total={activities.length} size="lg" />
@@ -200,7 +200,7 @@ export default function DomainDetailPage() {
       {/* Activities */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold">Actividades</h2>
+          <h2 className="text-lg font-semibold">Acciones</h2>
           <Button
             size="sm"
             onClick={() => router.push('/mi-plan/actividad/nueva')}
@@ -214,10 +214,10 @@ export default function DomainDetailPage() {
           <Card>
             <CardContent className="py-8 text-center">
               <p className="text-muted-foreground mb-4">
-                No hay actividades en este dominio
+                No hay acciones en este dominio
               </p>
               <Button onClick={() => router.push('/mi-plan/actividad/nueva')}>
-                Crear actividad
+                Crear acción
               </Button>
             </CardContent>
           </Card>

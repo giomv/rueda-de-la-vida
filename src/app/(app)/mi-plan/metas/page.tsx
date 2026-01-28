@@ -142,7 +142,7 @@ export default function MetasPage() {
             <Target className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
             <h3 className="text-lg font-medium mb-2">Sin metas</h3>
             <p className="text-muted-foreground mb-4">
-              Las metas te ayudan a organizar tus actividades.
+              Las metas te ayudan a organizar tus acciones.
             </p>
             <Button onClick={() => setShowNewGoal(true)}>
               <Plus className="w-4 h-4 mr-2" />

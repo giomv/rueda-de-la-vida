@@ -9,7 +9,7 @@ const navItems = [
   { href: '/inicio', label: 'Inicio', icon: LayoutDashboard },
   { href: '/mi-plan', label: 'Mi Plan', icon: ListChecks },
   { href: '/mis-ruedas', label: 'Rueda', icon: CircleDot },
-  { href: '/plan-de-vida', label: 'Odyssey', icon: Map },
+  { href: '/plan-de-vida', label: 'Plan de vida', icon: Map },
   { href: '/perfil', label: 'Perfil', icon: User },
 ];
 

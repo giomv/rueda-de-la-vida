@@ -54,10 +54,10 @@ export function ImportDialog({ open, onOpenChange, onImportComplete }: ImportDia
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Download className="w-5 h-5" />
-            Sincronizar actividades
+            Sincronizar acciones
           </DialogTitle>
           <DialogDescription>
-            Importa automáticamente las actividades desde tu Rueda de la Vida y Plan de Vida (Odyssey).
+            Importa automáticamente las acciones desde tu Rueda de la Vida y Plan de vida.
           </DialogDescription>
         </DialogHeader>
 
@@ -79,11 +79,11 @@ export function ImportDialog({ open, onOpenChange, onImportComplete }: ImportDia
               <div className="bg-muted rounded-lg p-4 space-y-2">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Desde Rueda de la Vida:</span>
-                  <span className="font-medium">{result.fromWheel} actividades</span>
+                  <span className="font-medium">{result.fromWheel} acciones</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Desde Odyssey:</span>
-                  <span className="font-medium">{result.fromOdyssey} actividades</span>
+                  <span className="text-muted-foreground">Desde Plan de vida:</span>
+                  <span className="font-medium">{result.fromOdyssey} acciones</span>
                 </div>
                 <hr className="border-border" />
                 <div className="flex justify-between">
@@ -94,7 +94,7 @@ export function ImportDialog({ open, onOpenChange, onImportComplete }: ImportDia
 
               {totalImported === 0 && (
                 <p className="text-sm text-muted-foreground">
-                  No se encontraron nuevas actividades para importar. Las actividades existentes no se duplican.
+                  No se encontraron nuevas acciones para importar. Las acciones existentes no se duplican.
                 </p>
               )}
             </div>
@@ -113,12 +113,12 @@ export function ImportDialog({ open, onOpenChange, onImportComplete }: ImportDia
                 <li className="flex items-start gap-2">
                   <span className="text-primary">•</span>
                   <span>
-                    <strong>Odyssey:</strong> Pasos de tu prototipo activo
+                    <strong>Plan de vida:</strong> Pasos de tu prototipo activo
                   </span>
                 </li>
               </ul>
               <p className="text-sm text-muted-foreground">
-                Las actividades que ya hayas importado anteriormente no se duplicarán.
+                Las acciones que ya hayas importado anteriormente no se duplicarán.
               </p>
             </div>
           )}

@@ -181,7 +181,7 @@ export default function PrototipoPage() {
       );
     }
 
-    router.push(`/plan-de-vida/${odysseyId}/prototipo/seguimiento`);
+    router.push('/mi-plan');
   };
 
   if (loading) {
@@ -329,7 +329,7 @@ export default function PrototipoPage() {
             onClick={handleStart}
             disabled={saving || (steps.every((s) => !s.title.trim()) && actions.length === 0) || (planMilestones.length > 0 && !selectedMilestoneId)}
           >
-            {saving ? 'Guardando...' : 'Iniciar 30 días'}
+            {saving ? 'Guardando...' : 'Iniciar mi plan'}
             <ArrowRight className="h-4 w-4 ml-2" />
           </Button>
         </div>
