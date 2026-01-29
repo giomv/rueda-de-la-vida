@@ -13,6 +13,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { getWheelData, saveActionPlan } from '@/lib/actions/wheel-actions';
+import { importFromWheel } from '@/lib/actions/import-actions';
 import { ChevronRight, ChevronLeft, ChevronDown, Plus, X, Info } from 'lucide-react';
 import type { Domain, ActionItem, Reflection, IdealLife, FrequencyType } from '@/lib/types';
 import { REFLECTION_QUESTIONS, IDEAL_LIFE_PROMPTS, FREQUENCY_OPTIONS } from '@/lib/types';
@@ -139,6 +140,10 @@ export default function PlanPage() {
         actions: plan.actions,
       });
     }
+
+    // Auto-import actions to Mi Plan
+    await importFromWheel(wheelId);
+
     router.push('/mi-plan');
   };
 

@@ -14,6 +14,7 @@ import { useOdysseyStore } from '@/lib/stores/odyssey-store';
 import {
   getOdysseyData, createPrototype, savePrototypeSteps, savePrototypeActions, updatePrototypeMilestone,
 } from '@/lib/actions/odyssey-actions';
+import { importActionsFromOdyssey, importFromOdyssey } from '@/lib/actions/import-actions';
 import { getOrCreateDomains } from '@/lib/actions/domain-actions';
 import { FREQUENCY_OPTIONS } from '@/lib/types';
 import type { PrototypeStepType, OdysseyMilestone, OdysseyPrototypeStep, OdysseyPrototypeAction, FrequencyType } from '@/lib/types';
@@ -180,6 +181,10 @@ export default function PrototipoPage() {
         selectedMilestoneId
       );
     }
+
+    // Auto-import actions and steps to Mi Plan
+    await importActionsFromOdyssey(prototypeId);
+    await importFromOdyssey(prototypeId);
 
     router.push('/mi-plan');
   };

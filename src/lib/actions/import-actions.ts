@@ -101,7 +101,7 @@ export async function importFromWheel(wheelId: string): Promise<number> {
           goal_id: goalId,
           source_type: 'WHEEL',
           source_id: sourceId,
-          frequency_type: 'WEEKLY',
+          frequency_type: action.frequency_type || 'WEEKLY',
           frequency_value: 1,
         });
 
@@ -189,6 +189,131 @@ export async function importFromOdyssey(prototypeId: string): Promise<number> {
         source_type: 'ODYSSEY',
         source_id: step.id,
         frequency_type: frequencyType,
+        frequency_value: 1,
+      });
+
+    if (!activityError) importedCount++;
+  }
+
+  return importedCount;
+}
+
+// Import actions from odyssey prototype actions (not steps)
+export async function importActionsFromOdyssey(prototypeId: string): Promise<number> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('No autenticado');
+
+  // Get prototype to verify ownership
+  const { data: prototype, error: protoError } = await supabase
+    .from('odyssey_prototypes')
+    .select(`
+      id,
+      odyssey_id,
+      odysseys(user_id)
+    `)
+    .eq('id', prototypeId)
+    .single();
+
+  const odysseyData = Array.isArray(prototype?.odysseys)
+    ? prototype?.odysseys[0] as { user_id: string } | undefined
+    : prototype?.odysseys as { user_id: string } | undefined;
+  if (protoError || !prototype || odysseyData?.user_id !== user.id) return 0;
+
+  // Get prototype actions
+  const { data: prototypeActions, error: actionsError } = await supabase
+    .from('odyssey_prototype_actions')
+    .select('*, odyssey_milestones(domain_id, title)')
+    .eq('prototype_id', prototypeId);
+
+  if (actionsError || !prototypeActions?.length) return 0;
+
+  // Get user's life domains for mapping
+  const { data: lifeDomains } = await supabase
+    .from('life_domains')
+    .select('id, slug, name')
+    .eq('user_id', user.id);
+
+  // Get domains for milestone matching
+  const { data: allDomains } = await supabase
+    .from('domains')
+    .select('id, name');
+
+  let importedCount = 0;
+
+  for (const action of prototypeActions) {
+    // Check if activity already exists (deduplication by source)
+    const { data: existing } = await supabase
+      .from('lifeplan_activities')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('source_type', 'ODYSSEY')
+      .eq('source_id', action.id)
+      .single();
+
+    if (existing) continue;
+
+    // Get domain from milestone if available
+    let domainId: string | null = null;
+    let goalId: string | null = null;
+
+    const milestoneData = Array.isArray(action.odyssey_milestones)
+      ? action.odyssey_milestones[0]
+      : action.odyssey_milestones;
+
+    if (milestoneData) {
+      // Get the domain name from the wheel domain
+      const wheelDomain = allDomains?.find((d) => d.id === milestoneData.domain_id);
+      if (wheelDomain) {
+        // Match to life domain by name
+        const matchedDomain = lifeDomains?.find(
+          (d) => d.name.toLowerCase() === wheelDomain.name.toLowerCase() || d.slug === wheelDomain.name.toLowerCase()
+        );
+        domainId = matchedDomain?.id || null;
+      }
+
+      // Create or find goal from milestone title
+      if (milestoneData.title) {
+        const { data: existingGoal } = await supabase
+          .from('goals')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('origin', 'ODYSSEY')
+          .eq('source_odyssey_id', prototype.odyssey_id)
+          .eq('title', milestoneData.title)
+          .single();
+
+        if (existingGoal) {
+          goalId = existingGoal.id;
+        } else {
+          const { data: newGoal } = await supabase
+            .from('goals')
+            .insert({
+              user_id: user.id,
+              title: milestoneData.title,
+              domain_id: domainId,
+              origin: 'ODYSSEY',
+              source_odyssey_id: prototype.odyssey_id,
+            })
+            .select()
+            .single();
+
+          goalId = newGoal?.id || null;
+        }
+      }
+    }
+
+    // Create activity
+    const { error: activityError } = await supabase
+      .from('lifeplan_activities')
+      .insert({
+        user_id: user.id,
+        title: action.text,
+        domain_id: domainId,
+        goal_id: goalId,
+        source_type: 'ODYSSEY',
+        source_id: action.id,
+        frequency_type: action.frequency_type || 'WEEKLY',
         frequency_value: 1,
       });
 
@@ -308,7 +433,9 @@ export async function syncLifePlanActivities(): Promise<ImportResult> {
     .single();
 
   if (prototype) {
+    // Import both steps (as activities) and actions
     results.fromOdyssey = await importFromOdyssey(prototype.id);
+    results.fromOdyssey += await importActionsFromOdyssey(prototype.id);
   }
 
   return results;
