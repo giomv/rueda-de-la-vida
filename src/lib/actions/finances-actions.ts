@@ -103,19 +103,30 @@ export async function getExpense(expenseId: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('No autenticado');
 
-  const { data, error } = await supabase
+  const { data: expense, error } = await supabase
     .from('expenses')
-    .select(`
-      *,
-      budget_account:budget_accounts(*),
-      domain:life_domains(id, name, icon)
-    `)
+    .select('*')
     .eq('id', expenseId)
     .eq('user_id', user.id)
     .single();
 
   if (error) throw new Error(error.message);
-  return data as ExpenseWithRelations;
+
+  // Fetch related data
+  const [accountResult, domainResult] = await Promise.all([
+    expense.budget_account_id
+      ? supabase.from('budget_accounts').select('*').eq('id', expense.budget_account_id).single()
+      : { data: null },
+    expense.domain_id
+      ? supabase.from('life_domains').select('id, name, icon').eq('id', expense.domain_id).single()
+      : { data: null },
+  ]);
+
+  return {
+    ...expense,
+    budget_account: accountResult.data || null,
+    domain: domainResult.data || null,
+  } as ExpenseWithRelations;
 }
 
 // Get expenses for date range
@@ -124,13 +135,10 @@ export async function getExpensesForDateRange(startDate: string, endDate: string
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('No autenticado');
 
-  const { data, error } = await supabase
+  // First get the expenses
+  const { data: expenses, error } = await supabase
     .from('expenses')
-    .select(`
-      *,
-      budget_account:budget_accounts(*),
-      domain:life_domains(id, name, icon)
-    `)
+    .select('*')
     .eq('user_id', user.id)
     .gte('date', startDate)
     .lte('date', endDate)
@@ -138,7 +146,31 @@ export async function getExpensesForDateRange(startDate: string, endDate: string
     .order('created_at', { ascending: false });
 
   if (error) throw new Error(error.message);
-  return data as ExpenseWithRelations[];
+  if (!expenses || expenses.length === 0) return [];
+
+  // Get unique account IDs and domain IDs
+  const accountIds = [...new Set(expenses.map(e => e.budget_account_id).filter(Boolean))];
+  const domainIds = [...new Set(expenses.map(e => e.domain_id).filter(Boolean))];
+
+  // Fetch related data
+  const [accountsResult, domainsResult] = await Promise.all([
+    accountIds.length > 0
+      ? supabase.from('budget_accounts').select('*').in('id', accountIds)
+      : { data: [] },
+    domainIds.length > 0
+      ? supabase.from('life_domains').select('id, name, icon').in('id', domainIds)
+      : { data: [] },
+  ]);
+
+  const accountsMap = new Map((accountsResult.data || []).map(a => [a.id, a]));
+  const domainsMap = new Map((domainsResult.data || []).map(d => [d.id, d]));
+
+  // Combine data
+  return expenses.map(expense => ({
+    ...expense,
+    budget_account: expense.budget_account_id ? accountsMap.get(expense.budget_account_id) || null : null,
+    domain: expense.domain_id ? domainsMap.get(expense.domain_id) || null : null,
+  })) as ExpenseWithRelations[];
 }
 
 // Get expenses by account
@@ -153,23 +185,38 @@ export async function getExpensesByAccount(
 
   let query = supabase
     .from('expenses')
-    .select(`
-      *,
-      budget_account:budget_accounts(*),
-      domain:life_domains(id, name, icon)
-    `)
+    .select('*')
     .eq('user_id', user.id)
     .eq('budget_account_id', accountId);
 
   if (startDate) query = query.gte('date', startDate);
   if (endDate) query = query.lte('date', endDate);
 
-  const { data, error } = await query
+  const { data: expenses, error } = await query
     .order('date', { ascending: false })
     .order('created_at', { ascending: false });
 
   if (error) throw new Error(error.message);
-  return data as ExpenseWithRelations[];
+  if (!expenses || expenses.length === 0) return [];
+
+  // Fetch the account and domains
+  const domainIds = [...new Set(expenses.map(e => e.domain_id).filter(Boolean))];
+
+  const [accountResult, domainsResult] = await Promise.all([
+    supabase.from('budget_accounts').select('*').eq('id', accountId).single(),
+    domainIds.length > 0
+      ? supabase.from('life_domains').select('id, name, icon').in('id', domainIds)
+      : { data: [] },
+  ]);
+
+  const account = accountResult.data || null;
+  const domainsMap = new Map((domainsResult.data || []).map(d => [d.id, d]));
+
+  return expenses.map(expense => ({
+    ...expense,
+    budget_account: account,
+    domain: expense.domain_id ? domainsMap.get(expense.domain_id) || null : null,
+  })) as ExpenseWithRelations[];
 }
 
 // ============================================

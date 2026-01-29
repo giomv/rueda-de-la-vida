@@ -11,11 +11,11 @@ function getDefaultDateRange(): { startDate: string; endDate: string } {
   const month = today.getMonth();
 
   // First day of current month
-  const startDate = new Date(year, month, 1);
-  const startStr = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}-01`;
+  const startStr = `${year}-${String(month + 1).padStart(2, '0')}-01`;
 
-  // Today
-  const endStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  // Last day of current month (to include all expenses in the month)
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  const endStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
   return { startDate: startStr, endDate: endStr };
 }

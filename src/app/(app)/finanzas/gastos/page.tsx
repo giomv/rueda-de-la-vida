@@ -9,19 +9,21 @@ import type { ExpenseWithRelations } from '@/lib/types/finances';
 function getDateRangeForToday(): { startDate: string; endDate: string } {
   const today = new Date();
   const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, '0');
-  const day = String(today.getDate()).padStart(2, '0');
+  const month = today.getMonth();
 
-  // Show last 7 days
+  // Show last 7 days, but use end of current month to catch any timezone issues
   const startDate = new Date(today);
   startDate.setDate(startDate.getDate() - 7);
   const startYear = startDate.getFullYear();
   const startMonth = String(startDate.getMonth() + 1).padStart(2, '0');
   const startDay = String(startDate.getDate()).padStart(2, '0');
 
+  // End of current month
+  const lastDay = new Date(year, month + 1, 0).getDate();
+
   return {
     startDate: `${startYear}-${startMonth}-${startDay}`,
-    endDate: `${year}-${month}-${day}`,
+    endDate: `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`,
   };
 }
 
@@ -31,6 +33,7 @@ export default function GastosPage() {
   const [loading, setLoading] = useState(true);
 
   const loadExpenses = useCallback(async () => {
+    setLoading(true);
     const { startDate, endDate } = getDateRangeForToday();
     try {
       const data = await getExpensesForDateRange(startDate, endDate);

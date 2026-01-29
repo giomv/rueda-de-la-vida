@@ -30,7 +30,9 @@ export function ExpenseForm({ expense, onSuccess }: ExpenseFormProps) {
   const [accounts, setAccounts] = useState<BudgetAccount[]>([]);
   const [domains, setDomains] = useState<LifeDomain[]>([]);
 
-  const today = new Date().toISOString().split('T')[0];
+  // Use local date to avoid timezone issues
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   const [amount, setAmount] = useState(expense?.amount?.toString() || '');
   const [date, setDate] = useState(expense?.date || today);
   const [accountId, setAccountId] = useState(expense?.budget_account_id || '__none__');
@@ -78,12 +80,17 @@ export function ExpenseForm({ expense, onSuccess }: ExpenseFormProps) {
         });
       }
 
+      // Reset form after successful save (for new expenses)
+      if (!expense) {
+        setAmount('');
+        setAccountId('__none__');
+        setDomainId('__none__');
+        setNote('');
+      }
+
       if (onSuccess) {
         onSuccess();
       } else {
-        // Reset form for new expense
-        setAmount('');
-        setNote('');
         router.refresh();
       }
     } catch (error) {
