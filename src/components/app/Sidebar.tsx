@@ -14,6 +14,7 @@ import {
   Moon,
   Sun,
   ListChecks,
+  Wallet,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
@@ -22,6 +23,7 @@ import { cn } from '@/lib/utils';
 const navItems = [
   { href: '/inicio', label: 'Inicio', icon: LayoutDashboard },
   { href: '/mi-plan', label: 'Mi Plan', icon: ListChecks },
+  { href: '/finanzas', label: 'Finanzas', icon: Wallet },
   { href: '/mis-ruedas', label: 'Mis Ruedas', icon: CircleDot },
   { href: '/plan-de-vida', label: 'Plan de Vida', icon: Map },
   { href: '/comparar', label: 'Comparar', icon: GitCompareArrows },
