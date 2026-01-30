@@ -5,16 +5,15 @@ import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Slider } from '@/components/ui/slider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { WizardProgress } from '@/components/app/WizardProgress';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { getWheelData, saveActionPlan } from '@/lib/actions/wheel-actions';
+import { SMARTGoalTooltip } from '@/components/shared/SMARTGoalTooltip';
 import { importFromWheel } from '@/lib/actions/import-actions';
-import { ChevronRight, ChevronLeft, ChevronDown, Plus, X, Info } from 'lucide-react';
+import { ChevronRight, ChevronLeft, ChevronDown, Plus, X } from 'lucide-react';
 import type { Domain, ActionItem, Reflection, IdealLife, FrequencyType } from '@/lib/types';
 import { REFLECTION_QUESTIONS, IDEAL_LIFE_PROMPTS, FREQUENCY_OPTIONS } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -247,16 +246,7 @@ export default function PlanPage() {
                 <div className="space-y-2">
                   <div className="flex items-center gap-1.5">
                     <Label className="text-sm">Meta</Label>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="max-w-xs">
-                        <p className="font-semibold">Meta SMART = clara y medible.</p>
-                        <p className="mt-1">Define qué quieres lograr, cuánto, y para cuándo.</p>
-                        <p className="mt-1 text-muted-foreground">Ejemplo: &quot;Ahorrar S/ 500 al mes hasta junio.&quot;</p>
-                      </TooltipContent>
-                    </Tooltip>
+                    <SMARTGoalTooltip source="rueda" />
                   </div>
                   <Input
                     placeholder="¿Qué quieres lograr en esta área?"
@@ -267,25 +257,6 @@ export default function PlanPage() {
                         [domain.id]: { ...prev[domain.id], goalText: e.target.value },
                       }))
                     }
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <Label className="text-sm">Puntaje objetivo</Label>
-                    <span className="text-sm font-medium">{plan.targetScore}/10</span>
-                  </div>
-                  <Slider
-                    value={[plan.targetScore]}
-                    onValueChange={([val]) =>
-                      setPlans((prev) => ({
-                        ...prev,
-                        [domain.id]: { ...prev[domain.id], targetScore: val },
-                      }))
-                    }
-                    min={1}
-                    max={10}
-                    step={1}
                   />
                 </div>
 
@@ -415,16 +386,7 @@ export default function PlanPage() {
                             <div className="space-y-2">
                               <div className="flex items-center gap-1.5">
                                 <Label className="text-sm">Meta</Label>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-                                  </TooltipTrigger>
-                                  <TooltipContent side="top" className="max-w-xs">
-                                    <p className="font-semibold">Meta SMART = clara y medible.</p>
-                                    <p className="mt-1">Define qué quieres lograr, cuánto, y para cuándo.</p>
-                                    <p className="mt-1 text-muted-foreground">Ejemplo: &quot;Ahorrar S/ 500 al mes hasta junio.&quot;</p>
-                                  </TooltipContent>
-                                </Tooltip>
+                                <SMARTGoalTooltip source="rueda" />
                               </div>
                               <Input
                                 placeholder="¿Qué quieres lograr en esta área?"
@@ -435,25 +397,6 @@ export default function PlanPage() {
                                     [domain.id]: { ...prev[domain.id], goalText: e.target.value },
                                   }))
                                 }
-                              />
-                            </div>
-
-                            <div className="space-y-2">
-                              <div className="flex justify-between">
-                                <Label className="text-sm">Puntaje objetivo</Label>
-                                <span className="text-sm font-medium">{plan.targetScore}/10</span>
-                              </div>
-                              <Slider
-                                value={[plan.targetScore]}
-                                onValueChange={([val]) =>
-                                  setPlans((prev) => ({
-                                    ...prev,
-                                    [domain.id]: { ...prev[domain.id], targetScore: val },
-                                  }))
-                                }
-                                min={1}
-                                max={10}
-                                step={1}
                               />
                             </div>
 

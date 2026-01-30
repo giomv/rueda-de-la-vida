@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Download, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ActivityList, ViewTabs, FilterChips, ImportDialog, ProgressRing } from '@/components/lifeplan';
+import { GroupedActivityList, ViewTabs, FilterChips, ImportDialog, ProgressBar } from '@/components/lifeplan';
 import { useLifePlan, useLifePlanSync } from '@/hooks/use-lifeplan';
 import { useLifePlanStore } from '@/lib/stores/lifeplan-store';
 
@@ -17,7 +17,7 @@ function formatDate(date: Date): string {
 
 export default function HoyPage() {
   const router = useRouter();
-  const { viewDate, setViewDate, setViewMode, getActivitiesForDate, getCompletionRate } = useLifePlanStore();
+  const { viewDate, setViewDate, setViewMode, getGroupedActivitiesForDate, getCompletionRateForView } = useLifePlanStore();
   const { activities, goals, domains, loading, error, refresh } = useLifePlan();
   const { sync, syncing, lastSyncResult } = useLifePlanSync();
 
@@ -36,8 +36,8 @@ export default function HoyPage() {
   }, [loading, activities.length, lastSyncResult, sync]);
 
   const today = formatDate(viewDate);
-  const todayActivities = getActivitiesForDate(today);
-  const { completed, total } = getCompletionRate(today);
+  const groupedActivities = getGroupedActivitiesForDate(today);
+  const { completed, total } = getCompletionRateForView('day', viewDate);
 
   const goToPreviousDay = () => {
     const prev = new Date(viewDate);
@@ -136,7 +136,16 @@ export default function HoyPage() {
       </div>
 
       {/* Filters */}
-      <FilterChips className="mb-6" />
+      <FilterChips className="mb-4" />
+
+      {/* Progress */}
+      <div className="mb-6">
+        <ProgressBar
+          completed={completed}
+          total={total}
+          showPendingCompleted
+        />
+      </div>
 
       {/* Sync notification */}
       {lastSyncResult && (lastSyncResult.fromWheel > 0 || lastSyncResult.fromOdyssey > 0) && (
@@ -145,8 +154,8 @@ export default function HoyPage() {
         </div>
       )}
 
-      {/* Activity list */}
-      <ActivityList date={today} activities={todayActivities} />
+      {/* Activity list - grouped by frequency (daily → weekly → monthly → once) */}
+      <GroupedActivityList date={today} groupedActivities={groupedActivities} showProgressHeader={false} />
 
       {/* Import dialog */}
       <ImportDialog

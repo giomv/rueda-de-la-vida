@@ -193,9 +193,8 @@ export const REFLECTION_QUESTIONS = [
 
 export const IDEAL_LIFE_PROMPTS = [
   { key: 'feel', label: '¿Cómo me siento?' },
-  { key: 'do', label: '¿Qué hago?' },
-  { key: 'who', label: '¿Con quién estoy?' },
-  { key: 'where', label: '¿Dónde estoy?' },
+  { key: 'do', label: '¿Qué Hago? ¿Quiénes me acompañan?' },
+  { key: 'who', label: '¿Que o quienes me ayudaron a llegar a este punto? ¿A quienes le agradezco?' },
 ];
 
 export * from './odyssey';

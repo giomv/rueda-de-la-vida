@@ -404,15 +404,14 @@ describe('wizard-store', () => {
       useWizardStore.getState().updateIdealLife('domain-1', {
         prompts_answers: {
           feel: '¿Cómo me siento? Increíble',
-          do: '¿Qué hago? Medito',
-          who: '¿Con quién estoy? Mi familia',
-          where: '¿Dónde estoy? En la playa',
+          do: '¿Qué Hago? Medito',
+          who: '¿Quiénes me ayudaron? Mi familia',
         },
       });
 
       const state = useWizardStore.getState();
       const prompts = state.idealLife[0].prompts_answers;
-      expect(Object.keys(prompts)).toHaveLength(4);
+      expect(Object.keys(prompts)).toHaveLength(3);
     });
   });
 

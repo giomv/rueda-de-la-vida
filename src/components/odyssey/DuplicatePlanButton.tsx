@@ -38,7 +38,7 @@ export function DuplicatePlanButton({ currentPlanNumber, onDuplicate }: Duplicat
             <DialogTitle>Copiar desde otro plan</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground mb-4">
-            Se copiarán los hitos y el headline del plan seleccionado.
+            Se copiarán las metas y el headline del plan seleccionado.
           </p>
           <div className="space-y-2">
             {availableSources.map((plan) => (

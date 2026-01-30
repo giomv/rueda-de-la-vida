@@ -26,13 +26,20 @@ export default function UnaVezPage() {
     (a) => !a.is_archived && a.frequency_type === 'ONCE'
   );
 
-  // Separate completed and pending
-  const pendingActivities = onceActivities.filter(
-    (a) => !a.completions.some((c) => c.period_key === 'ONCE' && c.completed)
-  );
-  const completedActivities = onceActivities.filter(
-    (a) => a.completions.some((c) => c.period_key === 'ONCE' && c.completed)
-  );
+  // Separate completed and pending, then sort by created_at (oldest first)
+  const pendingActivities = onceActivities
+    .filter((a) => !a.completions.some((c) => c.period_key === 'ONCE' && c.completed))
+    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  const completedActivities = onceActivities
+    .filter((a) => a.completions.some((c) => c.period_key === 'ONCE' && c.completed))
+    .sort((a, b) => {
+      // Sort by completion date (most recent first)
+      const aCompletion = a.completions.find((c) => c.period_key === 'ONCE' && c.completed);
+      const bCompletion = b.completions.find((c) => c.period_key === 'ONCE' && c.completed);
+      const aDate = aCompletion?.completed_at ? new Date(aCompletion.completed_at).getTime() : 0;
+      const bDate = bCompletion?.completed_at ? new Date(bCompletion.completed_at).getTime() : 0;
+      return bDate - aDate; // Most recent first
+    });
 
   const handleToggleComplete = async (activityId: string) => {
     // For ONCE activities, we pass today's date but completion is stored with period_key 'ONCE'
@@ -116,10 +123,8 @@ export default function UnaVezPage() {
         <ProgressBar
           completed={completedActivities.length}
           total={onceActivities.length}
+          showPendingCompleted
         />
-        <p className="text-sm text-muted-foreground text-center mt-2">
-          {completedActivities.length} de {onceActivities.length} tareas completadas
-        </p>
       </div>
 
       {/* Empty state */}

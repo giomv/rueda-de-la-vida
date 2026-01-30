@@ -77,6 +77,7 @@ describe('lifeplan-store', () => {
         id: 'completion-1',
         activity_id: 'activity-1',
         date: '2024-01-15',
+        period_key: '2024-01-15',
         completed: true,
         completed_at: new Date().toISOString(),
         notes: null,
@@ -96,6 +97,7 @@ describe('lifeplan-store', () => {
           id: 'completion-1',
           activity_id: 'activity-1',
           date: '2024-01-15',
+          period_key: '2024-01-15',
           completed: true,
           completed_at: new Date().toISOString(),
           notes: null,
@@ -108,6 +110,7 @@ describe('lifeplan-store', () => {
         id: 'completion-1',
         activity_id: 'activity-1',
         date: '2024-01-15',
+        period_key: '2024-01-15',
         completed: false,
         completed_at: null,
         notes: null,
@@ -318,6 +321,7 @@ describe('lifeplan-store', () => {
           id: 'c1',
           activity_id: 'activity-1',
           date: '2024-01-15',
+          period_key: '2024-01-15',
           completed: true,
           completed_at: new Date().toISOString(),
           notes: null,
@@ -342,6 +346,358 @@ describe('lifeplan-store', () => {
       const rate = useLifePlanStore.getState().getCompletionRate('2024-01-15');
       expect(rate.completed).toBe(0);
       expect(rate.total).toBe(0);
+    });
+  });
+
+  describe('getCompletionRateForView', () => {
+    const createActivityWithCompletion = (
+      id: string,
+      frequency: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'ONCE',
+      completed: boolean,
+      periodKey: string,
+    ): ActivityWithCompletions => ({
+      id,
+      user_id: 'user-123',
+      title: `${frequency} activity ${id}`,
+      notes: null,
+      domain_id: null,
+      goal_id: null,
+      source_type: 'MANUAL',
+      source_id: null,
+      frequency_type: frequency,
+      frequency_value: 1,
+      scheduled_days: frequency === 'WEEKLY' ? ['L', 'M', 'X', 'J', 'V', 'S', 'D'] : null,
+      time_of_day: null,
+      order_position: 0,
+      is_archived: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      completions: completed ? [{
+        id: `c-${id}`,
+        activity_id: id,
+        date: '2024-01-15',
+        period_key: periodKey,
+        completed: true,
+        completed_at: new Date().toISOString(),
+        notes: null,
+      }] : [],
+    });
+
+    it('should calculate completion rate for day view - ONLY DAILY activities', () => {
+      // Day view shows daily + carryovers, but counter should ONLY count DAILY
+      useLifePlanStore.getState().setActivities([
+        createActivityWithCompletion('daily-1', 'DAILY', true, '2024-01-15'),
+        createActivityWithCompletion('daily-2', 'DAILY', false, ''),
+        createActivityWithCompletion('weekly-1', 'WEEKLY', false, ''), // Carryover - should NOT be counted
+        createActivityWithCompletion('monthly-1', 'MONTHLY', false, ''), // Carryover - should NOT be counted
+        createActivityWithCompletion('once-1', 'ONCE', false, ''), // Carryover - should NOT be counted
+      ]);
+
+      const viewDate = new Date(2024, 0, 15); // Jan 15, 2024
+      const rate = useLifePlanStore.getState().getCompletionRateForView('day', viewDate);
+
+      expect(rate.total).toBe(2); // ONLY 2 daily activities
+      expect(rate.completed).toBe(1); // Only daily-1 is completed
+      expect(rate.pending).toBe(1);
+    });
+
+    it('should calculate completion rate for week view - ONLY WEEKLY activities', () => {
+      // Week view shows weekly + carryovers, but counter should ONLY count WEEKLY
+      useLifePlanStore.getState().setActivities([
+        createActivityWithCompletion('weekly-1', 'WEEKLY', true, '2024-W03'),
+        createActivityWithCompletion('weekly-2', 'WEEKLY', false, ''),
+        createActivityWithCompletion('monthly-1', 'MONTHLY', false, ''), // Carryover - should NOT be counted
+        createActivityWithCompletion('once-1', 'ONCE', false, ''), // Carryover - should NOT be counted
+        createActivityWithCompletion('daily-1', 'DAILY', true, '2024-01-15'), // Not shown in week view
+      ]);
+
+      const viewDate = new Date(2024, 0, 15); // Jan 15, 2024
+      const rate = useLifePlanStore.getState().getCompletionRateForView('week', viewDate);
+
+      expect(rate.total).toBe(2); // ONLY 2 weekly activities
+      expect(rate.completed).toBe(1); // Only weekly-1 is completed
+      expect(rate.pending).toBe(1);
+    });
+
+    it('should calculate completion rate for month view - ONLY MONTHLY activities', () => {
+      // Month view shows monthly + carryovers, but counter should ONLY count MONTHLY
+      useLifePlanStore.getState().setActivities([
+        createActivityWithCompletion('monthly-1', 'MONTHLY', true, '2024-01'),
+        createActivityWithCompletion('monthly-2', 'MONTHLY', false, ''),
+        createActivityWithCompletion('once-1', 'ONCE', false, ''), // Carryover - should NOT be counted
+        createActivityWithCompletion('weekly-1', 'WEEKLY', true, '2024-W03'), // Not shown in month view
+      ]);
+
+      const viewDate = new Date(2024, 0, 15);
+      const rate = useLifePlanStore.getState().getCompletionRateForView('month', viewDate);
+
+      expect(rate.total).toBe(2); // ONLY 2 monthly activities
+      expect(rate.completed).toBe(1); // monthly-1 is completed
+      expect(rate.pending).toBe(1);
+    });
+
+    it('should calculate completion rate for once view - ONLY ONCE activities', () => {
+      useLifePlanStore.getState().setActivities([
+        createActivityWithCompletion('once-1', 'ONCE', true, 'ONCE'),
+        createActivityWithCompletion('once-2', 'ONCE', false, ''),
+        createActivityWithCompletion('once-3', 'ONCE', true, 'ONCE'),
+        createActivityWithCompletion('daily-1', 'DAILY', true, '2024-01-15'), // Should not be counted
+        createActivityWithCompletion('weekly-1', 'WEEKLY', true, '2024-W03'), // Should not be counted
+      ]);
+
+      const viewDate = new Date(2024, 0, 15);
+      const rate = useLifePlanStore.getState().getCompletionRateForView('once', viewDate);
+
+      expect(rate.total).toBe(3); // ONLY 3 once activities
+      expect(rate.completed).toBe(2); // once-1 and once-3
+      expect(rate.pending).toBe(1);
+    });
+
+    it('should return zero when no native activities exist (0 native actions edge case)', () => {
+      // Day view with no DAILY activities, only carryovers
+      useLifePlanStore.getState().setActivities([
+        createActivityWithCompletion('weekly-1', 'WEEKLY', false, ''),
+        createActivityWithCompletion('monthly-1', 'MONTHLY', false, ''),
+        createActivityWithCompletion('once-1', 'ONCE', false, ''),
+      ]);
+
+      const viewDate = new Date(2024, 0, 15);
+      const rate = useLifePlanStore.getState().getCompletionRateForView('day', viewDate);
+
+      // Should show 0/0 (no DAILY activities)
+      expect(rate.total).toBe(0);
+      expect(rate.completed).toBe(0);
+      expect(rate.pending).toBe(0);
+    });
+
+    it('should show 100% green when all native actions completed (carryovers pending)', () => {
+      // Day view: all DAILY completed, but carryovers pending
+      useLifePlanStore.getState().setActivities([
+        createActivityWithCompletion('daily-1', 'DAILY', true, '2024-01-15'),
+        createActivityWithCompletion('daily-2', 'DAILY', true, '2024-01-15'),
+        createActivityWithCompletion('weekly-1', 'WEEKLY', false, ''), // Carryover pending - should NOT affect counter
+        createActivityWithCompletion('once-1', 'ONCE', false, ''), // Carryover pending - should NOT affect counter
+      ]);
+
+      const viewDate = new Date(2024, 0, 15);
+      const rate = useLifePlanStore.getState().getCompletionRateForView('day', viewDate);
+
+      // All DAILY activities completed = 100% (even with pending carryovers)
+      expect(rate.total).toBe(2);
+      expect(rate.completed).toBe(2);
+      expect(rate.pending).toBe(0);
+    });
+
+    it('should return zero for empty activities', () => {
+      const viewDate = new Date(2024, 0, 15);
+      const rate = useLifePlanStore.getState().getCompletionRateForView('week', viewDate);
+
+      expect(rate.completed).toBe(0);
+      expect(rate.total).toBe(0);
+      expect(rate.pending).toBe(0);
+    });
+  });
+
+  describe('getGroupedActivitiesForDate', () => {
+    // Create activities with different frequencies for testing ordering
+    const createActivity = (
+      id: string,
+      frequency: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'ONCE',
+      timeOfDay: string | null,
+      createdAt: string,
+    ): ActivityWithCompletions => ({
+      id,
+      user_id: 'user-123',
+      title: `${frequency} activity ${id}`,
+      notes: null,
+      domain_id: null,
+      goal_id: null,
+      source_type: 'MANUAL',
+      source_id: null,
+      frequency_type: frequency,
+      frequency_value: 1,
+      scheduled_days: frequency === 'WEEKLY' ? ['L', 'M', 'X', 'J', 'V', 'S', 'D'] : null,
+      time_of_day: timeOfDay,
+      order_position: 0,
+      is_archived: false,
+      created_at: createdAt,
+      updated_at: createdAt,
+      completions: [],
+    });
+
+    it('should group activities by frequency in order: DAILY → WEEKLY → MONTHLY → ONCE', () => {
+      // Add activities in random order
+      useLifePlanStore.getState().setActivities([
+        createActivity('once-1', 'ONCE', null, '2024-01-01T10:00:00Z'),
+        createActivity('daily-1', 'DAILY', null, '2024-01-01T10:00:00Z'),
+        createActivity('monthly-1', 'MONTHLY', null, '2024-01-01T10:00:00Z'),
+        createActivity('weekly-1', 'WEEKLY', null, '2024-01-01T10:00:00Z'),
+      ]);
+
+      const groups = useLifePlanStore.getState().getGroupedActivitiesForDate('2024-01-15');
+
+      expect(groups).toHaveLength(4);
+      expect(groups[0].frequency).toBe('DAILY');
+      expect(groups[0].label).toBe('Diarias');
+      expect(groups[1].frequency).toBe('WEEKLY');
+      expect(groups[1].label).toBe('Semanales');
+      expect(groups[2].frequency).toBe('MONTHLY');
+      expect(groups[2].label).toBe('Mensuales');
+      expect(groups[3].frequency).toBe('ONCE');
+      expect(groups[3].label).toBe('Única vez');
+    });
+
+    it('should only include non-empty groups', () => {
+      useLifePlanStore.getState().setActivities([
+        createActivity('daily-1', 'DAILY', null, '2024-01-01T10:00:00Z'),
+        createActivity('once-1', 'ONCE', null, '2024-01-01T10:00:00Z'),
+      ]);
+
+      const groups = useLifePlanStore.getState().getGroupedActivitiesForDate('2024-01-15');
+
+      expect(groups).toHaveLength(2);
+      expect(groups[0].frequency).toBe('DAILY');
+      expect(groups[1].frequency).toBe('ONCE');
+    });
+
+    it('should sort activities within a group by time_of_day (earliest first)', () => {
+      useLifePlanStore.getState().setActivities([
+        createActivity('daily-3', 'DAILY', '15:00', '2024-01-01T10:00:00Z'),
+        createActivity('daily-1', 'DAILY', '07:00', '2024-01-01T10:00:00Z'),
+        createActivity('daily-2', 'DAILY', '12:00', '2024-01-01T10:00:00Z'),
+      ]);
+
+      const groups = useLifePlanStore.getState().getGroupedActivitiesForDate('2024-01-15');
+
+      expect(groups).toHaveLength(1);
+      expect(groups[0].activities[0].time_of_day).toBe('07:00');
+      expect(groups[0].activities[1].time_of_day).toBe('12:00');
+      expect(groups[0].activities[2].time_of_day).toBe('15:00');
+    });
+
+    it('should sort activities with null time_of_day after those with times', () => {
+      useLifePlanStore.getState().setActivities([
+        createActivity('daily-1', 'DAILY', null, '2024-01-01T10:00:00Z'),
+        createActivity('daily-2', 'DAILY', '08:00', '2024-01-01T12:00:00Z'),
+      ]);
+
+      const groups = useLifePlanStore.getState().getGroupedActivitiesForDate('2024-01-15');
+
+      expect(groups[0].activities[0].time_of_day).toBe('08:00');
+      expect(groups[0].activities[1].time_of_day).toBeNull();
+    });
+
+    it('should sort by created_at (oldest first) when time_of_day is equal', () => {
+      useLifePlanStore.getState().setActivities([
+        createActivity('daily-2', 'DAILY', '08:00', '2024-01-02T10:00:00Z'),
+        createActivity('daily-1', 'DAILY', '08:00', '2024-01-01T10:00:00Z'),
+        createActivity('daily-3', 'DAILY', '08:00', '2024-01-03T10:00:00Z'),
+      ]);
+
+      const groups = useLifePlanStore.getState().getGroupedActivitiesForDate('2024-01-15');
+
+      expect(groups[0].activities[0].id).toBe('daily-1'); // oldest
+      expect(groups[0].activities[1].id).toBe('daily-2');
+      expect(groups[0].activities[2].id).toBe('daily-3'); // newest
+    });
+
+    it('should return empty array when no activities', () => {
+      const groups = useLifePlanStore.getState().getGroupedActivitiesForDate('2024-01-15');
+      expect(groups).toHaveLength(0);
+    });
+  });
+
+  describe('getGroupedActivitiesForView', () => {
+    const createActivity = (
+      id: string,
+      frequency: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'ONCE',
+      timeOfDay: string | null,
+      createdAt: string,
+    ): ActivityWithCompletions => ({
+      id,
+      user_id: 'user-123',
+      title: `${frequency} activity ${id}`,
+      notes: null,
+      domain_id: null,
+      goal_id: null,
+      source_type: 'MANUAL',
+      source_id: null,
+      frequency_type: frequency,
+      frequency_value: 1,
+      scheduled_days: frequency === 'WEEKLY' ? ['L', 'M', 'X', 'J', 'V', 'S', 'D'] : null,
+      time_of_day: timeOfDay,
+      order_position: 0,
+      is_archived: false,
+      created_at: createdAt,
+      updated_at: createdAt,
+      completions: [],
+    });
+
+    beforeEach(() => {
+      // Set up activities with all frequency types
+      useLifePlanStore.getState().setActivities([
+        createActivity('daily-1', 'DAILY', '08:00', '2024-01-01T10:00:00Z'),
+        createActivity('weekly-1', 'WEEKLY', '09:00', '2024-01-01T10:00:00Z'),
+        createActivity('monthly-1', 'MONTHLY', '10:00', '2024-01-01T10:00:00Z'),
+        createActivity('once-1', 'ONCE', '11:00', '2024-01-01T10:00:00Z'),
+      ]);
+    });
+
+    it('week view: should show groups in order WEEKLY → MONTHLY → ONCE (no DAILY)', () => {
+      const viewDate = new Date('2024-01-15');
+      const groups = useLifePlanStore.getState().getGroupedActivitiesForView('week', viewDate);
+
+      // Week view excludes DAILY
+      expect(groups).toHaveLength(3);
+      expect(groups[0].frequency).toBe('WEEKLY');
+      expect(groups[1].frequency).toBe('MONTHLY');
+      expect(groups[2].frequency).toBe('ONCE');
+    });
+
+    it('month view: should show groups in order MONTHLY → ONCE (no DAILY or WEEKLY)', () => {
+      const viewDate = new Date('2024-01-15');
+      const groups = useLifePlanStore.getState().getGroupedActivitiesForView('month', viewDate);
+
+      // Month view excludes DAILY and WEEKLY
+      expect(groups).toHaveLength(2);
+      expect(groups[0].frequency).toBe('MONTHLY');
+      expect(groups[1].frequency).toBe('ONCE');
+    });
+
+    it('once view: should show only ONCE activities', () => {
+      const viewDate = new Date('2024-01-15');
+      const groups = useLifePlanStore.getState().getGroupedActivitiesForView('once', viewDate);
+
+      expect(groups).toHaveLength(1);
+      expect(groups[0].frequency).toBe('ONCE');
+      expect(groups[0].activities).toHaveLength(1);
+    });
+
+    it('day view: should show all groups in order DAILY → WEEKLY → MONTHLY → ONCE', () => {
+      const viewDate = new Date('2024-01-15'); // Monday
+      const groups = useLifePlanStore.getState().getGroupedActivitiesForView('day', viewDate);
+
+      expect(groups).toHaveLength(4);
+      expect(groups[0].frequency).toBe('DAILY');
+      expect(groups[1].frequency).toBe('WEEKLY');
+      expect(groups[2].frequency).toBe('MONTHLY');
+      expect(groups[3].frequency).toBe('ONCE');
+    });
+
+    it('should maintain within-group sorting in all views', () => {
+      // Add more weekly activities to test sorting
+      useLifePlanStore.getState().setActivities([
+        createActivity('weekly-3', 'WEEKLY', '16:00', '2024-01-01T10:00:00Z'),
+        createActivity('weekly-1', 'WEEKLY', '08:00', '2024-01-01T10:00:00Z'),
+        createActivity('weekly-2', 'WEEKLY', '12:00', '2024-01-01T10:00:00Z'),
+      ]);
+
+      const viewDate = new Date('2024-01-15');
+      const groups = useLifePlanStore.getState().getGroupedActivitiesForView('week', viewDate);
+
+      expect(groups[0].activities[0].time_of_day).toBe('08:00');
+      expect(groups[0].activities[1].time_of_day).toBe('12:00');
+      expect(groups[0].activities[2].time_of_day).toBe('16:00');
     });
   });
 

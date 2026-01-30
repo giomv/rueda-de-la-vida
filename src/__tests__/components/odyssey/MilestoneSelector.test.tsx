@@ -114,7 +114,7 @@ describe('MilestoneSelector', () => {
     );
 
     expect(
-      screen.getByText(/No hay hitos en este plan/i)
+      screen.getByText(/No hay metas en este plan/i)
     ).toBeInTheDocument();
   });
 

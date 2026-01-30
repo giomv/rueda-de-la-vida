@@ -371,8 +371,7 @@ describe('Wheel Wizard Flow Integration', () => {
       const promptAnswers: Record<string, string> = {
         feel: 'Me siento energético y motivado',
         do: 'Hago ejercicio cada mañana',
-        who: 'Estoy con mi familia',
-        where: 'En mi casa ideal',
+        who: 'Mi familia me ayudó a llegar aquí',
       };
 
       useWizardStore.getState().updateIdealLife(domains[0].id, {

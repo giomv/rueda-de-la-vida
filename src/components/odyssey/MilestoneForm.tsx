@@ -90,7 +90,7 @@ export function MilestoneForm({ open, onClose, onSave, year, initial, showTags =
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {initial ? 'Editar hito' : 'Nuevo hito'}
+            {initial ? 'Editar meta' : 'Nueva meta'}
           </DialogTitle>
         </DialogHeader>
 

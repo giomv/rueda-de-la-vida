@@ -51,7 +51,7 @@ export default function NuevaRuedaPage() {
               <Label htmlFor="title">Nombre de tu rueda</Label>
               <Input
                 id="title"
-                placeholder={`Mi rueda - ${today}`}
+                placeholder={`Ej. Mi rueda - ${today}`}
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 required

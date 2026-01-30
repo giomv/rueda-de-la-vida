@@ -3,7 +3,24 @@
     "allow": [
       "Bash(npx tsc:*)",
       "Bash(npm run build:*)",
-      "Bash(npm test:*)"
+      "Bash(npm test:*)",
+      "Bash(head:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(git diff:*)",
+      "Bash(npx next build:*)",
+      "Bash(npx jest:*)"
+    ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "afplay /System/Library/Sounds/Glass.aiff"
+          }
+        ]
+      }
     ]
   }
 }

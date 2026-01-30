@@ -196,7 +196,7 @@ export default function Plan3Page() {
         />
 
         <div>
-          <h2 className="text-sm font-semibold mb-3">Hitos a 5 años</h2>
+          <h2 className="text-sm font-semibold mb-3">Metas a 5 años</h2>
           <TimelineBuilder
             milestones={planMilestones}
             yearNames={plan?.year_names || {}}

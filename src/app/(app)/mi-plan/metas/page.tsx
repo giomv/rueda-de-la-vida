@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Target, ChevronLeft } from 'lucide-react';
+import { SMARTGoalTooltip } from '@/components/shared/SMARTGoalTooltip';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -174,7 +175,10 @@ export default function MetasPage() {
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="goalTitle">Título *</Label>
+              <div className="flex items-center gap-1.5">
+                <Label htmlFor="goalTitle">Título *</Label>
+                <SMARTGoalTooltip source="mi_plan" />
+              </div>
               <Input
                 id="goalTitle"
                 value={newTitle}

@@ -98,7 +98,7 @@ export default function ResultadoPage() {
                   <CardContent className="space-y-3">
                     {plan.milestones.length > 0 && (
                       <div>
-                        <p className="text-xs font-medium mb-2">Hitos:</p>
+                        <p className="text-xs font-medium mb-2">Metas:</p>
                         <div className="space-y-1">
                           {plan.milestones.map((m) => (
                             <p key={m.id} className="text-sm">

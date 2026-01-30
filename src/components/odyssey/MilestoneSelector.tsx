@@ -44,7 +44,7 @@ export function MilestoneSelector({ milestones, selectedId, onSelect, domains = 
       <Card>
         <CardContent className="py-6 text-center">
           <p className="text-sm text-muted-foreground">
-            No hay hitos en este plan. Vuelve a editar el plan para agregar hitos.
+            No hay metas en este plan. Vuelve a editar el plan para agregar metas.
           </p>
         </CardContent>
       </Card>

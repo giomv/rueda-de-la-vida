@@ -78,7 +78,7 @@ export function YearColumn({ year, yearName, milestones, onAdd, onEdit, onDelete
           onClick={() => setShowForm(true)}
         >
           <Plus className="h-3.5 w-3.5 mr-1" />
-          Hito
+          Meta
         </Button>
       </div>
 
@@ -104,7 +104,7 @@ export function YearColumn({ year, yearName, milestones, onAdd, onEdit, onDelete
             isOver && 'border-primary bg-primary/5'
           )}>
             <p className="text-xs text-muted-foreground">
-              {isOver ? 'Soltar aquí' : 'Sin hitos'}
+              {isOver ? 'Soltar aquí' : 'Sin metas'}
             </p>
           </div>
         )}

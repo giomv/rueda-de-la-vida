@@ -70,6 +70,46 @@ function parseLocalDate(dateStr: string): Date {
   return new Date(year, month - 1, day);
 }
 
+// Frequency priority order (shorter cadence = lower number = higher priority)
+const FREQUENCY_PRIORITY: Record<FrequencyType, number> = {
+  DAILY: 0,
+  WEEKLY: 1,
+  MONTHLY: 2,
+  ONCE: 3,
+};
+
+// Frequency labels for headers
+export const FREQUENCY_LABELS: Record<FrequencyType, string> = {
+  DAILY: 'Diarias',
+  WEEKLY: 'Semanales',
+  MONTHLY: 'Mensuales',
+  ONCE: 'Única vez',
+};
+
+// Type for grouped activities
+export interface GroupedActivities {
+  frequency: FrequencyType;
+  label: string;
+  activities: ActivityWithCompletions[];
+}
+
+// Sort activities within a group by time_of_day, then created_at
+function sortActivitiesWithinGroup(activities: ActivityWithCompletions[]): ActivityWithCompletions[] {
+  return [...activities].sort((a, b) => {
+    // First sort by time_of_day (earliest first, null last)
+    if (a.time_of_day && b.time_of_day) {
+      const timeCompare = a.time_of_day.localeCompare(b.time_of_day);
+      if (timeCompare !== 0) return timeCompare;
+    } else if (a.time_of_day && !b.time_of_day) {
+      return -1;
+    } else if (!a.time_of_day && b.time_of_day) {
+      return 1;
+    }
+    // Then sort by created_at (oldest first)
+    return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+  });
+}
+
 interface LifePlanStoreState {
   // Data
   activities: ActivityWithCompletions[];
@@ -127,7 +167,10 @@ interface LifePlanStoreState {
   // Computed / helpers
   getActivitiesForDate: (date: string) => ActivityWithCompletions[];
   getActivitiesForView: (viewMode: ViewMode, date: Date) => ActivityWithCompletions[];
+  getGroupedActivitiesForDate: (date: string) => GroupedActivities[];
+  getGroupedActivitiesForView: (viewMode: ViewMode, date: Date) => GroupedActivities[];
   getCompletionRate: (date: string) => { completed: number; total: number };
+  getCompletionRateForView: (viewMode: ViewMode, date: Date) => { completed: number; total: number; pending: number };
   isCompletedForPeriod: (activity: ActivityWithCompletions, date: Date) => boolean;
 }
 
@@ -383,5 +426,144 @@ export const useLifePlanStore = create<LifePlanStoreState>((set, get) => ({
     }).length;
 
     return { completed, total: activities.length };
+  },
+
+  getCompletionRateForView: (viewMode, date) => {
+    const state = get();
+
+    // Map view mode to its native frequency type
+    const nativeFrequency: FrequencyType | null = {
+      day: 'DAILY' as FrequencyType,
+      week: 'WEEKLY' as FrequencyType,
+      month: 'MONTHLY' as FrequencyType,
+      once: 'ONCE' as FrequencyType,
+    }[viewMode] || null;
+
+    if (!nativeFrequency) {
+      return { completed: 0, total: 0, pending: 0 };
+    }
+
+    // Get only non-archived activities of the native frequency (respecting filters)
+    const nativeActivities = state.activities.filter((activity) => {
+      if (activity.is_archived) return false;
+      if (activity.frequency_type !== nativeFrequency) return false;
+
+      // Apply filters
+      if (state.filter === 'domain' && state.selectedDomainId) {
+        if (activity.domain_id !== state.selectedDomainId) return false;
+      }
+      if (state.filter === 'goal' && state.selectedGoalId) {
+        if (activity.goal_id !== state.selectedGoalId) return false;
+      }
+      if (state.filter === 'uncategorized') {
+        if (activity.domain_id || activity.goal_id) return false;
+      }
+
+      return true;
+    });
+
+    const periodKey = getPeriodKey(nativeFrequency, date);
+    const completed = nativeActivities.filter((a) =>
+      a.completions.some((c) => c.period_key === periodKey && c.completed)
+    ).length;
+
+    const pending = nativeActivities.length - completed;
+    return { completed, total: nativeActivities.length, pending };
+  },
+
+  // Get activities grouped by frequency for a specific date (Day view)
+  // Order: DAILY → WEEKLY → MONTHLY → ONCE (shorter cadence first)
+  getGroupedActivitiesForDate: (date) => {
+    const state = get();
+    const activities = state.getActivitiesForDate(date);
+
+    // Group by frequency
+    const grouped: Record<FrequencyType, ActivityWithCompletions[]> = {
+      DAILY: [],
+      WEEKLY: [],
+      MONTHLY: [],
+      ONCE: [],
+    };
+
+    for (const activity of activities) {
+      const freq = activity.frequency_type as FrequencyType;
+      if (grouped[freq]) {
+        grouped[freq].push(activity);
+      }
+    }
+
+    // Build result array with only non-empty groups, sorted by frequency priority
+    const result: GroupedActivities[] = [];
+    const frequencies: FrequencyType[] = ['DAILY', 'WEEKLY', 'MONTHLY', 'ONCE'];
+
+    for (const freq of frequencies) {
+      if (grouped[freq].length > 0) {
+        result.push({
+          frequency: freq,
+          label: FREQUENCY_LABELS[freq],
+          activities: sortActivitiesWithinGroup(grouped[freq]),
+        });
+      }
+    }
+
+    return result;
+  },
+
+  // Get activities grouped by frequency for a specific view mode
+  // Week view order: WEEKLY → MONTHLY → ONCE
+  // Month view order: MONTHLY → ONCE
+  // Once view: just ONCE
+  getGroupedActivitiesForView: (viewMode, date) => {
+    const state = get();
+    const activities = state.getActivitiesForView(viewMode, date);
+
+    // Determine which frequencies to show based on view mode
+    let frequencies: FrequencyType[];
+    switch (viewMode) {
+      case 'day':
+        frequencies = ['DAILY', 'WEEKLY', 'MONTHLY', 'ONCE'];
+        break;
+      case 'week':
+        frequencies = ['WEEKLY', 'MONTHLY', 'ONCE'];
+        break;
+      case 'month':
+        frequencies = ['MONTHLY', 'ONCE'];
+        break;
+      case 'once':
+        frequencies = ['ONCE'];
+        break;
+      default:
+        frequencies = ['DAILY', 'WEEKLY', 'MONTHLY', 'ONCE'];
+    }
+
+    // Group by frequency
+    const grouped: Record<FrequencyType, ActivityWithCompletions[]> = {
+      DAILY: [],
+      WEEKLY: [],
+      MONTHLY: [],
+      ONCE: [],
+    };
+
+    for (const activity of activities) {
+      const freq = activity.frequency_type as FrequencyType;
+      if (grouped[freq]) {
+        grouped[freq].push(activity);
+      }
+    }
+
+    // Build result array with only non-empty groups, in the correct order
+    const result: GroupedActivities[] = [];
+
+    for (const freq of frequencies) {
+      if (grouped[freq].length > 0) {
+        result.push({
+          frequency: freq,
+          label: FREQUENCY_LABELS[freq],
+          activities: sortActivitiesWithinGroup(grouped[freq]),
+        });
+      }
+    }
+
+    return result;
   },
 }));

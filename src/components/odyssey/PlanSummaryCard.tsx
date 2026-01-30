@@ -72,7 +72,7 @@ export function PlanSummaryCard({ plan, isSelected, onSelect }: PlanSummaryCardP
         {/* Top milestones */}
         {topMilestones.length > 0 && (
           <div className="space-y-1">
-            <p className="text-xs font-medium text-muted-foreground">Hitos principales:</p>
+            <p className="text-xs font-medium text-muted-foreground">Metas principales:</p>
             {topMilestones.map((m) => (
               <p key={m.id} className="text-xs truncate">
                 Año {m.year}: {m.title}
@@ -82,7 +82,7 @@ export function PlanSummaryCard({ plan, isSelected, onSelect }: PlanSummaryCardP
         )}
 
         <p className="text-xs text-muted-foreground">
-          {plan.milestones.length} hitos en total
+          {plan.milestones.length} metas en total
         </p>
       </CardContent>
     </Card>

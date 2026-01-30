@@ -206,7 +206,7 @@ export default function PrototipoPage() {
         <div>
           <h1 className="text-xl font-bold mb-1">Diseño de vida</h1>
           <p className="text-sm text-muted-foreground">
-            Ahora selecciona uno de tus hitos y genera 3 acciones para acercarte a lograrlo.
+            Ahora selecciona una de tus metas y genera 3 acciones para acercarte a lograrla.
           </p>
         </div>
 
@@ -221,9 +221,9 @@ export default function PrototipoPage() {
 
         {/* Milestone Selection */}
         <div>
-          <h2 className="text-sm font-semibold mb-2">1. Selecciona el hito a prototipar</h2>
+          <h2 className="text-sm font-semibold mb-2">1. Selecciona la meta a prototipar</h2>
           <p className="text-xs text-muted-foreground mb-3">
-            Elige el hito que quieres comenzar a prototipar. Las acciones que definas deben ayudarte a avanzar hacia este hito.
+            Elige la meta que quieres comenzar a prototipar. Las acciones que definas deben ayudarte a avanzar hacia esta meta.
           </p>
           <MilestoneSelector
             milestones={planMilestones}
@@ -242,7 +242,7 @@ export default function PrototipoPage() {
                 Responde sobre qué acciones te servirían para llegar a cumplir tu meta: <span className="font-medium">&ldquo;{selectedMilestone.title}&rdquo;</span>
               </>
             ) : (
-              'Selecciona un hito arriba para personalizar tus acciones.'
+              'Selecciona una meta arriba para personalizar tus acciones.'
             )}
           </p>
           <PrototypeSetup steps={steps} onChange={setSteps} />
@@ -318,7 +318,7 @@ export default function PrototipoPage() {
             </Card>
           ) : (
             <p className="text-sm text-muted-foreground italic">
-              Selecciona un hito arriba para definir acciones.
+              Selecciona una meta arriba para definir acciones.
             </p>
           )}
         </div>

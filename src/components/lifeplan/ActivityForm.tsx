@@ -9,13 +9,11 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
-  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { SearchableGoalSelect } from './SearchableGoalSelect';
 import {
   Dialog,
   DialogContent,
@@ -24,13 +22,13 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus } from 'lucide-react';
 import { FrequencySelector } from './FrequencySelector';
 import { createActivity, updateActivity } from '@/lib/actions/lifeplan-actions';
 import { createGoal } from '@/lib/actions/goal-actions';
 import { cn } from '@/lib/utils';
-import type { LifePlanActivity, FrequencyType, CreateActivityInput, SourceType, Goal } from '@/lib/types/lifeplan';
+import type { LifePlanActivity, FrequencyType, CreateActivityInput, Goal } from '@/lib/types/lifeplan';
 import type { LifeDomain } from '@/lib/types';
+import { SMARTGoalTooltip } from '@/components/shared/SMARTGoalTooltip';
 
 interface ActivityFormProps {
   activity?: LifePlanActivity;
@@ -42,16 +40,6 @@ interface ActivityFormProps {
   className?: string;
 }
 
-const getOriginSuffix = (origin: SourceType): string => {
-  switch (origin) {
-    case 'ODYSSEY':
-      return ' (PV)';
-    case 'WHEEL':
-      return ' (RV)';
-    default:
-      return '';
-  }
-};
 
 export function ActivityForm({
   activity,
@@ -93,14 +81,12 @@ export function ActivityForm({
     ? goals.filter((g) => g.domain_id === domainId || !g.domain_id)
     : goals;
 
-  const handleGoalSelection = (value: string) => {
-    if (value === 'none') {
-      setGoalId(null);
-    } else if (value === 'new') {
-      setShowNewGoalDialog(true);
-    } else {
-      setGoalId(value);
-    }
+  const handleGoalChange = (value: string | null) => {
+    setGoalId(value);
+  };
+
+  const handleNewGoal = () => {
+    setShowNewGoalDialog(true);
   };
 
   const handleCreateGoal = async () => {
@@ -240,35 +226,13 @@ export function ActivityForm({
 
           <div className="space-y-2">
             <Label>Meta relacionada (opcional)</Label>
-            <Select
-              value={goalId || 'none'}
-              onValueChange={handleGoalSelection}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar meta" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Sin meta</SelectItem>
-                <SelectSeparator />
-                <SelectItem value="new">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nueva meta
-                </SelectItem>
-                {filteredGoals.length > 0 && (
-                  <>
-                    <SelectSeparator />
-                    <SelectGroup>
-                      <SelectLabel>Metas actuales</SelectLabel>
-                      {filteredGoals.map((goal) => (
-                        <SelectItem key={goal.id} value={goal.id}>
-                          {goal.title}{getOriginSuffix(goal.origin)}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </>
-                )}
-              </SelectContent>
-            </Select>
+            <SearchableGoalSelect
+              goals={filteredGoals}
+              value={goalId}
+              onChange={handleGoalChange}
+              onNewGoal={handleNewGoal}
+              placeholder="Seleccionar meta"
+            />
           </div>
         </CardContent>
       </Card>
@@ -334,7 +298,10 @@ export function ActivityForm({
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="newGoalTitle">Título *</Label>
+              <div className="flex items-center gap-1.5">
+                <Label htmlFor="newGoalTitle">Título *</Label>
+                <SMARTGoalTooltip source="mi_plan" />
+              </div>
               <Input
                 id="newGoalTitle"
                 value={newGoalTitle}

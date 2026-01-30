@@ -30,7 +30,7 @@ export function generateOdysseyInsights(plans: PlanWithMilestones[]): OdysseyIns
   if (mostMilestones.milestones.length > 0) {
     insights.push({
       type: 'suggestion',
-      text: `El Plan ${mostMilestones.plan_number} es el más detallado con ${mostMilestones.milestones.length} hitos.`,
+      text: `El Plan ${mostMilestones.plan_number} es el más detallado con ${mostMilestones.milestones.length} metas.`,
     });
   }
 

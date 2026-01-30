@@ -1,5 +1,6 @@
 export { ActivityCard } from './ActivityCard';
 export { ActivityList } from './ActivityList';
+export { GroupedActivityList } from './GroupedActivityList';
 export { ActivityForm } from './ActivityForm';
 export { ProgressRing, ProgressBar } from './ProgressRing';
 export { ViewTabs } from './ViewTabs';
@@ -10,3 +11,4 @@ export { GoalCard } from './GoalCard';
 export { WeeklyCheckinForm } from './WeeklyCheckinForm';
 export { ImportDialog } from './ImportDialog';
 export { OriginBadge } from './OriginBadge';
+export { SearchableGoalSelect } from './SearchableGoalSelect';

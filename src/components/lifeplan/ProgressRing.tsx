@@ -79,24 +79,36 @@ export function ProgressBar({
   completed,
   total,
   className,
+  showPendingCompleted = false,
 }: {
   completed: number;
   total: number;
   className?: string;
+  showPendingCompleted?: boolean;
 }) {
+  const pending = total - completed;
   const percentage = total > 0 ? (completed / total) * 100 : 0;
 
   return (
     <div className={cn('w-full', className)}>
-      <div className="flex justify-between text-xs text-muted-foreground mb-1">
-        <span>{completed} de {total}</span>
-        <span>{Math.round(percentage)}%</span>
+      <div className="flex justify-between text-sm text-muted-foreground mb-1">
+        {showPendingCompleted ? (
+          <>
+            <span>Pendientes: {pending}</span>
+            <span>Completadas: {completed}</span>
+          </>
+        ) : (
+          <>
+            <span>{completed} de {total}</span>
+            <span>{Math.round(percentage)}%</span>
+          </>
+        )}
       </div>
       <div className="h-2 bg-muted rounded-full overflow-hidden">
         <div
           className={cn(
             'h-full transition-all duration-300 rounded-full',
-            percentage === 100 ? 'bg-green-500' : 'bg-primary'
+            percentage === 100 && total > 0 ? 'bg-green-500' : 'bg-primary'
           )}
           style={{ width: `${percentage}%` }}
         />
