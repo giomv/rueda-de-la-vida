@@ -200,3 +200,4 @@ export const IDEAL_LIFE_PROMPTS = [
 export * from './odyssey';
 export * from './lifeplan';
 export * from './finances';
+export * from './dashboard';

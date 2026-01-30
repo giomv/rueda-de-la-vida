@@ -2,14 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, CircleDot, User, Map, ListChecks, Wallet } from 'lucide-react';
+import { LayoutDashboard, CircleDot, User, Map, ListChecks, Wallet, Gauge } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { href: '/inicio', label: 'Inicio', icon: LayoutDashboard },
+  { href: '/dashboard', label: 'Dashboard', icon: Gauge },
   { href: '/mi-plan', label: 'Mi Plan', icon: ListChecks },
   { href: '/finanzas', label: 'Finanzas', icon: Wallet },
-  { href: '/mis-ruedas', label: 'Rueda', icon: CircleDot },
   { href: '/plan-de-vida', label: 'Plan de vida', icon: Map },
   { href: '/perfil', label: 'Perfil', icon: User },
 ];

@@ -31,6 +31,7 @@ export interface Expense {
   date: string;
   budget_account_id: string | null;
   domain_id: string | null;
+  goal_id: string | null;
   note: string | null;
   created_at: string;
   updated_at: string;
@@ -44,6 +45,7 @@ export interface MonthlyBudgetWithAccounts extends MonthlyBudget {
 export interface ExpenseWithRelations extends Expense {
   budget_account?: BudgetAccount | null;
   domain?: { id: string; name: string; icon: string | null } | null;
+  goal?: { id: string; title: string } | null;
 }
 
 export interface BudgetAccountWithActual extends BudgetAccount {
@@ -89,6 +91,7 @@ export interface CreateExpenseInput {
   date: string;
   budget_account_id?: string | null;
   domain_id?: string | null;
+  goal_id?: string | null;
   note?: string | null;
 }
 
@@ -97,6 +100,7 @@ export interface UpdateExpenseInput {
   date?: string;
   budget_account_id?: string | null;
   domain_id?: string | null;
+  goal_id?: string | null;
   note?: string | null;
 }
 

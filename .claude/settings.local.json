@@ -8,7 +8,8 @@
       "mcp__ide__getDiagnostics",
       "Bash(git diff:*)",
       "Bash(npx next build:*)",
-      "Bash(npx jest:*)"
+      "Bash(npx jest:*)",
+      "Bash(ls:*)"
     ]
   },
   "hooks": {

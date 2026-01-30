@@ -15,6 +15,7 @@ import {
   Sun,
   ListChecks,
   Wallet,
+  Gauge,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
@@ -22,6 +23,7 @@ import { cn } from '@/lib/utils';
 
 const navItems = [
   { href: '/inicio', label: 'Inicio', icon: LayoutDashboard },
+  { href: '/dashboard', label: 'Dashboard', icon: Gauge },
   { href: '/mi-plan', label: 'Mi Plan', icon: ListChecks },
   { href: '/finanzas', label: 'Finanzas', icon: Wallet },
   { href: '/mis-ruedas', label: 'Mis Ruedas', icon: CircleDot },
