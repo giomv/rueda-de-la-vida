@@ -12,12 +12,18 @@ export { FocusCard } from './SummarySection/FocusCard';
 // Domains section
 export { DomainsList } from './DomainsSection/DomainsList';
 export { DomainCard } from './DomainsSection/DomainCard';
+export { DomainSummaryCard } from './DomainsSection/DomainSummaryCard';
 export { DomainDetailSheet } from './DomainsSection/DomainDetailSheet';
+export { AddDomainDialog } from './DomainsSection/AddDomainDialog';
 
 // Goals section
 export { GoalsList } from './GoalsSection/GoalsList';
 export { GoalCard } from './GoalsSection/GoalCard';
 export { GoalDetailSheet } from './GoalsSection/GoalDetailSheet';
+
+// Metas section (Plan de Vida)
+export { MetasSection } from './MetasSection/MetasSection';
+export { MetaCard } from './MetasSection/MetaCard';
 
 // Smart pending
 export { PendingList } from './SmartPending/PendingList';

@@ -11,7 +11,9 @@
       "Bash(npx jest:*)",
       "Bash(ls:*)",
       "Bash(xargs:*)",
-      "Bash(npx eslint:*)"
+      "Bash(npx eslint:*)",
+      "Bash(grep:*)",
+      "Bash(npm run lint:*)"
     ]
   },
   "hooks": {

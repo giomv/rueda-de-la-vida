@@ -10,7 +10,7 @@ import {
   FinanceSummaryCard,
   FocusCard,
   DomainsList,
-  GoalsList,
+  MetasSection,
   PendingList,
   ActivityFeedList,
   CheckinDialog,
@@ -33,15 +33,19 @@ export default function DashboardPage() {
     actionsSummary,
     financeSummary,
     focusItems,
-    domainsProgress,
-    goalsProgress,
     pendingItems,
     activityFeed,
     activityHasMore,
     isLoadingMoreActivity,
     loadMoreActivity,
     actionGridData,
+    domainsSummary,
+    metasSummary,
+    metasYearIndex,
+    fetchMetasForYear,
     filters,
+    handlePinDomain,
+    handleUnpinDomain,
   } = useDashboard();
 
   // Sync URL params to store on mount
@@ -103,17 +107,27 @@ export default function DashboardPage() {
         {loading ? (
           <ListSkeleton count={4} />
         ) : (
-          <DomainsList domains={domainsProgress} />
+          <DomainsList
+            domainsSummary={domainsSummary}
+            onPinDomain={handlePinDomain}
+            onUnpinDomain={handleUnpinDomain}
+            showAddButton={!filters.domainId}
+          />
         )}
       </section>
 
-      {/* Goals Section */}
+      {/* Metas Section (Plan de Vida) */}
       <section className="mb-6">
-        <h2 className="text-lg font-semibold mb-3">Metas</h2>
         {loading ? (
           <ListSkeleton count={4} />
         ) : (
-          <GoalsList goals={goalsProgress} />
+          <MetasSection
+            metasSummary={metasSummary}
+            selectedYearIndex={metasYearIndex}
+            onYearChange={fetchMetasForYear}
+            globalGoalFilter={filters.goalId}
+            loading={loading}
+          />
         )}
       </section>
 

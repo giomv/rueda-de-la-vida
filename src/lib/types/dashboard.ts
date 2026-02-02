@@ -58,6 +58,19 @@ export interface GoalProgress {
   actionsTotal: number;
 }
 
+// ===== DOMAIN SUMMARY TYPES =====
+
+export interface DomainSummaryData extends DomainProgress {
+  wheelPosition?: number | null; // #1, #2, #3 from wheel priorities
+  isPinned: boolean;
+}
+
+export interface DomainsSummaryResponse {
+  prioritizedDomains: DomainSummaryData[]; // Top 3 from wheel priorities
+  pinnedDomains: DomainSummaryData[];      // User-added extras
+  availableDomains: LifeDomain[];           // Domains not shown, for add modal
+}
+
 // ===== FOCUS TYPES =====
 
 export interface FocusItem {
@@ -218,6 +231,31 @@ export const SATISFACTION_SCALE = [
   { value: 4, label: 'Bien' },
   { value: 5, label: 'Excelente' },
 ];
+
+// ===== METAS SUMMARY TYPES =====
+
+export interface MetaSummaryItem {
+  id: string;
+  milestoneId: string;
+  goalId: string | null;
+  title: string;
+  yearIndex: number;
+  domainId: string | null;
+  domainName: string | null;
+  actionsDoneCount: number;
+  actionsPendingCount: number;
+  spentTotal: number;
+  savedTotal: number;
+}
+
+export interface MetasSummaryResponse {
+  planId: string | null;
+  odysseyId: string | null;
+  odysseyTitle: string | null;
+  availableYears: number[];
+  selectedYearIndex: number;
+  metas: MetaSummaryItem[];
+}
 
 // ===== ACTION GRID TYPES =====
 

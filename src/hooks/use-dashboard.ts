@@ -13,6 +13,10 @@ import {
   getGoals,
   hasActivePlan as checkHasActivePlan,
   getActionGridData,
+  getDomainsSummaryData,
+  getMetasSummary,
+  pinDomain as pinDomainAction,
+  unpinDomain as unpinDomainAction,
 } from '@/lib/actions/dashboard-actions';
 
 export function useDashboard() {
@@ -37,6 +41,7 @@ export function useDashboard() {
       }
 
       const filters = store.getFilters();
+      const metasYearIndex = store.metasYearIndex;
 
       // Fetch all data in parallel
       const [
@@ -49,6 +54,8 @@ export function useDashboard() {
         domains,
         goals,
         actionGridData,
+        domainsSummary,
+        metasSummary,
       ] = await Promise.all([
         getDashboardSummary(filters),
         getDomainsProgress(filters),
@@ -59,6 +66,8 @@ export function useDashboard() {
         getDomains(),
         getGoals(filters.domainId),
         getActionGridData(filters),
+        getDomainsSummaryData(filters),
+        getMetasSummary(filters, metasYearIndex),
       ]);
 
       // Update store with all data
@@ -76,6 +85,8 @@ export function useDashboard() {
         domains,
         goals,
         actionGridData,
+        domainsSummary,
+        metasSummary,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error desconocido');
@@ -83,7 +94,7 @@ export function useDashboard() {
       setLoading(false);
       store.setIsLoading(false);
     }
-  }, [store.year, store.month, store.domainId, store.goalId]);
+  }, [store.year, store.month, store.domainId, store.goalId, store.metasYearIndex]);
 
   // Initial load and refresh on filter change
   useEffect(() => {
@@ -121,6 +132,40 @@ export function useDashboard() {
     }
   }, [store.activityNextCursor, store.activityHasMore, store.isLoadingMoreActivity]);
 
+  // Pin a domain to the dashboard
+  const handlePinDomain = useCallback(async (domainId: string) => {
+    try {
+      await pinDomainAction(domainId);
+      // Refresh to update the domains summary
+      await fetchData();
+    } catch (err) {
+      console.error('Error pinning domain:', err);
+    }
+  }, [fetchData]);
+
+  // Unpin a domain from the dashboard
+  const handleUnpinDomain = useCallback(async (domainId: string) => {
+    try {
+      await unpinDomainAction(domainId);
+      // Refresh to update the domains summary
+      await fetchData();
+    } catch (err) {
+      console.error('Error unpinning domain:', err);
+    }
+  }, [fetchData]);
+
+  // Fetch metas for a specific year (optimized - only fetches metas)
+  const fetchMetasForYear = useCallback(async (yearIndex: number) => {
+    try {
+      store.setMetasYearIndex(yearIndex);
+      const filters = store.getFilters();
+      const metasSummary = await getMetasSummary(filters, yearIndex);
+      store.setMetasSummary(metasSummary);
+    } catch (err) {
+      console.error('Error fetching metas:', err);
+    }
+  }, []);
+
   return {
     // State
     loading,
@@ -139,6 +184,9 @@ export function useDashboard() {
     isLoadingMoreActivity: store.isLoadingMoreActivity,
     celebration: store.celebration,
     actionGridData: store.actionGridData,
+    domainsSummary: store.domainsSummary,
+    metasSummary: store.metasSummary,
+    metasYearIndex: store.metasYearIndex,
 
     // Reference data
     domains: store.domains,
@@ -155,6 +203,10 @@ export function useDashboard() {
     setDomainId: store.setDomainId,
     setGoalId: store.setGoalId,
     clearFilters: store.clearFilters,
+    handlePinDomain,
+    handleUnpinDomain,
+    fetchMetasForYear,
+    setMetasYearIndex: store.setMetasYearIndex,
   };
 }
 

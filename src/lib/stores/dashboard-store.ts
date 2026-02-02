@@ -12,6 +12,8 @@ import type {
   ActivityFeedItem,
   Celebration,
   ActionGridData,
+  DomainsSummaryResponse,
+  MetasSummaryResponse,
 } from '@/lib/types/dashboard';
 import type { LifeDomain, Goal } from '@/lib/types';
 
@@ -21,6 +23,7 @@ interface DashboardState {
   month: number;
   domainId: string | null;
   goalId: string | null;
+  metasYearIndex: number;
 
   // Data
   actionsSummary: ActionsSummary | null;
@@ -34,6 +37,8 @@ interface DashboardState {
   activityHasMore: boolean;
   celebration: Celebration | null;
   actionGridData: ActionGridData | null;
+  domainsSummary: DomainsSummaryResponse | null;
+  metasSummary: MetasSummaryResponse | null;
 
   // Reference data
   domains: LifeDomain[];
@@ -49,6 +54,7 @@ interface DashboardState {
   setMonth: (month: number) => void;
   setDomainId: (id: string | null) => void;
   setGoalId: (id: string | null) => void;
+  setMetasYearIndex: (yearIndex: number) => void;
   clearFilters: () => void;
   getFilters: () => DashboardFilters;
 
@@ -65,6 +71,8 @@ interface DashboardState {
   setActivityHasMore: (h: boolean) => void;
   setCelebration: (c: Celebration | null) => void;
   setActionGridData: (data: ActionGridData | null) => void;
+  setDomainsSummary: (data: DomainsSummaryResponse | null) => void;
+  setMetasSummary: (data: MetasSummaryResponse | null) => void;
 
   // Reference data setters
   setDomains: (d: LifeDomain[]) => void;
@@ -87,6 +95,7 @@ const initialState = {
   month: now.getMonth() + 1,
   domainId: null,
   goalId: null,
+  metasYearIndex: 1,
 
   actionsSummary: null,
   financeSummary: null,
@@ -99,6 +108,8 @@ const initialState = {
   activityHasMore: false,
   celebration: null,
   actionGridData: null,
+  domainsSummary: null,
+  metasSummary: null,
 
   domains: [],
   goals: [],
@@ -116,12 +127,14 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   setMonth: (month) => set({ month }),
   setDomainId: (domainId) => set({ domainId }),
   setGoalId: (goalId) => set({ goalId }),
+  setMetasYearIndex: (metasYearIndex) => set({ metasYearIndex }),
 
   clearFilters: () => set({
     year: new Date().getFullYear(),
     month: new Date().getMonth() + 1,
     domainId: null,
     goalId: null,
+    metasYearIndex: 1,
   }),
 
   getFilters: () => {
@@ -149,6 +162,8 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   setActivityHasMore: (activityHasMore) => set({ activityHasMore }),
   setCelebration: (celebration) => set({ celebration }),
   setActionGridData: (actionGridData) => set({ actionGridData }),
+  setDomainsSummary: (domainsSummary) => set({ domainsSummary }),
+  setMetasSummary: (metasSummary) => set({ metasSummary }),
 
   // Reference data setters
   setDomains: (domains) => set({ domains }),

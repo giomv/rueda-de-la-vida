@@ -21,6 +21,10 @@ import type {
   WeeklyGridData,
   MonthlyGridData,
   OnceGridData,
+  DomainSummaryData,
+  DomainsSummaryResponse,
+  MetasSummaryResponse,
+  MetaSummaryItem,
 } from '@/lib/types/dashboard';
 import type { LifeDomain, Goal, WeeklyCheckin, FrequencyType } from '@/lib/types';
 
@@ -1213,5 +1217,535 @@ export async function getActionGridData(filters: DashboardFilters): Promise<Acti
     weekly,
     monthly,
     once,
+  };
+}
+
+// ===== DOMAIN SUMMARY (Wheel Priorities + Pinned) =====
+
+/**
+ * Normalize a string to a slug for matching
+ */
+function normalizeToSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove accents
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+/**
+ * Get the most recent wheel with priorities set
+ */
+async function getActiveWheelPriorities(): Promise<{
+  wheelId: string;
+  priorities: Array<{ domainName: string; rank: number }>;
+} | null> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  // Get the most recent wheel with priorities
+  const { data: wheels } = await supabase
+    .from('wheels')
+    .select(`
+      id,
+      created_at,
+      priorities(
+        id,
+        rank,
+        domain:domains(name)
+      )
+    `)
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false });
+
+  // Find first wheel that has priorities
+  const wheelWithPriorities = wheels?.find(w => w.priorities && w.priorities.length > 0);
+
+  if (!wheelWithPriorities) return null;
+
+  // Extract priorities with domain names
+  const priorities: Array<{ domainName: string; rank: number }> = [];
+
+  for (const p of wheelWithPriorities.priorities) {
+    // domain is returned as object from the join
+    const domainData = p.domain as unknown as { name: string } | null;
+    if (domainData?.name) {
+      priorities.push({
+        domainName: domainData.name,
+        rank: p.rank,
+      });
+    }
+  }
+
+  priorities.sort((a, b) => a.rank - b.rank);
+
+  return {
+    wheelId: wheelWithPriorities.id,
+    priorities,
+  };
+}
+
+/**
+ * Map wheel domain names to life_domains by slug matching
+ */
+function mapWheelDomainsToLifeDomains(
+  priorities: Array<{ domainName: string; rank: number }>,
+  lifeDomains: LifeDomain[]
+): Map<string, number> {
+  // Create a map of slug -> rank
+  const domainIdToRank = new Map<string, number>();
+
+  for (const priority of priorities) {
+    const slug = normalizeToSlug(priority.domainName);
+
+    // Find matching life_domain by slug
+    const matchingDomain = lifeDomains.find(ld => ld.slug === slug);
+
+    if (matchingDomain) {
+      domainIdToRank.set(matchingDomain.id, priority.rank);
+    }
+  }
+
+  return domainIdToRank;
+}
+
+/**
+ * Get user's pinned domains
+ */
+async function getUserPinnedDomainIds(): Promise<string[]> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data: pins } = await supabase
+    .from('dashboard_domain_pins')
+    .select('domain_id')
+    .eq('user_id', user.id)
+    .order('order_position');
+
+  return pins?.map(p => p.domain_id) || [];
+}
+
+/**
+ * Get domains summary data for the dashboard
+ * Shows: prioritized domains from wheel (top 3), pinned domains, available domains
+ */
+export async function getDomainsSummaryData(
+  filters: DashboardFilters
+): Promise<DomainsSummaryResponse> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('No autenticado');
+
+  // Fetch all required data in parallel
+  const [
+    domainsProgress,
+    wheelData,
+    pinnedDomainIds,
+    allLifeDomains,
+  ] = await Promise.all([
+    getDomainsProgress(filters),
+    getActiveWheelPriorities(),
+    getUserPinnedDomainIds(),
+    getDomains(),
+  ]);
+
+  // Create a map of domain ID -> DomainProgress
+  const progressMap = new Map(domainsProgress.map(dp => [dp.domain.id, dp]));
+
+  // Map wheel priorities to life domain IDs
+  const domainIdToWheelRank = wheelData
+    ? mapWheelDomainsToLifeDomains(wheelData.priorities, allLifeDomains)
+    : new Map<string, number>();
+
+  // Get top 3 prioritized domains
+  const prioritizedDomainIds = Array.from(domainIdToWheelRank.entries())
+    .sort((a, b) => a[1] - b[1])
+    .slice(0, 3)
+    .map(([id]) => id);
+
+  // If domain filter is active, only show that domain
+  if (filters.domainId) {
+    const filteredProgress = progressMap.get(filters.domainId);
+    if (!filteredProgress) {
+      return {
+        prioritizedDomains: [],
+        pinnedDomains: [],
+        availableDomains: [],
+      };
+    }
+
+    const wheelPosition = domainIdToWheelRank.get(filters.domainId);
+    const isPinned = pinnedDomainIds.includes(filters.domainId);
+
+    const domainData: DomainSummaryData = {
+      ...filteredProgress,
+      wheelPosition: wheelPosition || null,
+      isPinned,
+    };
+
+    // If it's a prioritized domain, show in that section
+    if (wheelPosition && wheelPosition <= 3) {
+      return {
+        prioritizedDomains: [domainData],
+        pinnedDomains: [],
+        availableDomains: [],
+      };
+    }
+
+    // Otherwise show as pinned
+    return {
+      prioritizedDomains: [],
+      pinnedDomains: [domainData],
+      availableDomains: [],
+    };
+  }
+
+  // Build prioritized domains (top 3 from wheel)
+  const prioritizedDomains: DomainSummaryData[] = prioritizedDomainIds
+    .map(id => {
+      const progress = progressMap.get(id);
+      if (!progress) return null;
+      const result: DomainSummaryData = {
+        ...progress,
+        wheelPosition: domainIdToWheelRank.get(id) ?? null,
+        isPinned: false,
+      };
+      return result;
+    })
+    .filter((d): d is DomainSummaryData => d !== null);
+
+  // Build pinned domains (excluding those already in prioritized)
+  const pinnedDomainIdsFiltered = pinnedDomainIds.filter(
+    id => !prioritizedDomainIds.includes(id)
+  );
+
+  const pinnedDomains: DomainSummaryData[] = pinnedDomainIdsFiltered
+    .map(id => {
+      const progress = progressMap.get(id);
+      if (!progress) return null;
+      const result: DomainSummaryData = {
+        ...progress,
+        wheelPosition: null,
+        isPinned: true,
+      };
+      return result;
+    })
+    .filter((d): d is DomainSummaryData => d !== null);
+
+  // Build available domains (not in prioritized or pinned)
+  const shownDomainIds = new Set([...prioritizedDomainIds, ...pinnedDomainIdsFiltered]);
+  const availableDomains = allLifeDomains.filter(d => !shownDomainIds.has(d.id));
+
+  return {
+    prioritizedDomains,
+    pinnedDomains,
+    availableDomains,
+  };
+}
+
+/**
+ * Pin a domain to the dashboard
+ */
+export async function pinDomain(domainId: string): Promise<void> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('No autenticado');
+
+  // Get current max order position
+  const { data: existingPins } = await supabase
+    .from('dashboard_domain_pins')
+    .select('order_position')
+    .eq('user_id', user.id)
+    .order('order_position', { ascending: false })
+    .limit(1);
+
+  const nextPosition = (existingPins?.[0]?.order_position ?? -1) + 1;
+
+  const { error } = await supabase
+    .from('dashboard_domain_pins')
+    .insert({
+      user_id: user.id,
+      domain_id: domainId,
+      order_position: nextPosition,
+    });
+
+  if (error) {
+    // If it's a duplicate key error, ignore it (domain already pinned)
+    if (error.code !== '23505') {
+      throw new Error(error.message);
+    }
+  }
+}
+
+/**
+ * Unpin a domain from the dashboard
+ */
+export async function unpinDomain(domainId: string): Promise<void> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('No autenticado');
+
+  const { error } = await supabase
+    .from('dashboard_domain_pins')
+    .delete()
+    .eq('user_id', user.id)
+    .eq('domain_id', domainId);
+
+  if (error) throw new Error(error.message);
+}
+
+// ===== METAS SUMMARY (Plan de Vida Milestones) =====
+
+/**
+ * Get metas summary from the active Plan de Vida
+ * Shows milestones by year with action and finance metrics
+ */
+export async function getMetasSummary(
+  filters: DashboardFilters,
+  yearIndex: number = 1
+): Promise<MetasSummaryResponse> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('No autenticado');
+
+  const { year, month, domainId, goalId } = filters;
+  const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+  const endDate = getLastDayOfMonth(year, month);
+
+  // Get user's odyssey with active plan
+  const { data: odyssey } = await supabase
+    .from('odysseys')
+    .select('id, title, active_plan_number')
+    .eq('user_id', user.id)
+    .not('active_plan_number', 'is', null)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .single();
+
+  if (!odyssey) {
+    return {
+      planId: null,
+      odysseyId: null,
+      odysseyTitle: null,
+      availableYears: [],
+      selectedYearIndex: yearIndex,
+      metas: [],
+    };
+  }
+
+  // Get the active plan
+  const { data: activePlan } = await supabase
+    .from('odyssey_plans')
+    .select('id')
+    .eq('odyssey_id', odyssey.id)
+    .eq('plan_number', odyssey.active_plan_number)
+    .single();
+
+  if (!activePlan) {
+    return {
+      planId: null,
+      odysseyId: odyssey.id,
+      odysseyTitle: odyssey.title,
+      availableYears: [],
+      selectedYearIndex: yearIndex,
+      metas: [],
+    };
+  }
+
+  // Get all milestones from the active plan to determine available years
+  const { data: allMilestones } = await supabase
+    .from('odyssey_milestones')
+    .select('year')
+    .eq('plan_id', activePlan.id);
+
+  const availableYears = [...new Set((allMilestones || []).map(m => m.year))].sort((a, b) => a - b);
+
+  // If no milestones, return empty
+  if (!availableYears.length) {
+    return {
+      planId: activePlan.id,
+      odysseyId: odyssey.id,
+      odysseyTitle: odyssey.title,
+      availableYears: [],
+      selectedYearIndex: yearIndex,
+      metas: [],
+    };
+  }
+
+  // Get milestones for the selected year
+  let milestonesQuery = supabase
+    .from('odyssey_milestones')
+    .select('id, title, year, domain_id, order_position')
+    .eq('plan_id', activePlan.id)
+    .eq('year', yearIndex)
+    .order('order_position');
+
+  // Apply domain filter if set
+  if (domainId) {
+    milestonesQuery = milestonesQuery.eq('domain_id', domainId);
+  }
+
+  const { data: milestones } = await milestonesQuery;
+
+  if (!milestones?.length) {
+    return {
+      planId: activePlan.id,
+      odysseyId: odyssey.id,
+      odysseyTitle: odyssey.title,
+      availableYears,
+      selectedYearIndex: yearIndex,
+      metas: [],
+    };
+  }
+
+  // Get imported goals that match these milestones
+  // Goals from odyssey have source_odyssey_id = odyssey.id and title matching milestone title
+  const { data: importedGoals } = await supabase
+    .from('goals')
+    .select('id, title, domain_id')
+    .eq('user_id', user.id)
+    .eq('origin', 'ODYSSEY')
+    .eq('source_odyssey_id', odyssey.id)
+    .eq('is_archived', false);
+
+  // Create a map of milestone title -> goal
+  const goalsByTitle = new Map<string, { id: string; domain_id: string | null }>();
+  (importedGoals || []).forEach(g => {
+    goalsByTitle.set(g.title.toLowerCase(), { id: g.id, domain_id: g.domain_id });
+  });
+
+  // If goalId filter is set, filter milestones to only that goal's milestone
+  let filteredMilestones = milestones;
+  if (goalId) {
+    const goalMatch = importedGoals?.find(g => g.id === goalId);
+    if (goalMatch) {
+      filteredMilestones = milestones.filter(m =>
+        m.title.toLowerCase() === goalMatch.title.toLowerCase()
+      );
+    } else {
+      filteredMilestones = [];
+    }
+  }
+
+  // Get goal IDs for metrics calculation
+  const goalIds = filteredMilestones
+    .map(m => goalsByTitle.get(m.title.toLowerCase())?.id)
+    .filter((id): id is string => id !== undefined);
+
+  // Get domain names for display
+  const domainIds = [...new Set(filteredMilestones.map(m => m.domain_id).filter(Boolean))];
+  const { data: domains } = domainIds.length > 0
+    ? await supabase.from('life_domains').select('id, name').in('id', domainIds)
+    : { data: [] };
+  const domainNameMap = new Map((domains || []).map(d => [d.id, d.name]));
+
+  // Fetch all metrics in bulk if there are goals
+  let activitiesMap = new Map<string, { scheduled: number; completed: number }>();
+  let expensesMap = new Map<string, number>();
+  let savingsMap = new Map<string, number>();
+
+  if (goalIds.length > 0) {
+    // Get activities per goal
+    const { data: activities } = await supabase
+      .from('lifeplan_activities')
+      .select('id, goal_id, frequency_type')
+      .eq('user_id', user.id)
+      .eq('is_archived', false)
+      .in('goal_id', goalIds);
+
+    // Get completions for these activities
+    const activityIds = activities?.map(a => a.id) || [];
+    const { data: completions } = activityIds.length > 0
+      ? await supabase
+          .from('activity_completions')
+          .select('activity_id')
+          .in('activity_id', activityIds)
+          .eq('completed', true)
+          .gte('date', startDate)
+          .lte('date', endDate)
+      : { data: [] };
+
+    // Build completions count by activity
+    const completionsByActivity = new Map<string, number>();
+    (completions || []).forEach(c => {
+      completionsByActivity.set(c.activity_id, (completionsByActivity.get(c.activity_id) || 0) + 1);
+    });
+
+    // Calculate scheduled and completed per goal
+    (activities || []).forEach(a => {
+      if (!a.goal_id) return;
+      const scheduled = calculateScheduledCount([a], year, month);
+      const completed = completionsByActivity.get(a.id) || 0;
+      const current = activitiesMap.get(a.goal_id) || { scheduled: 0, completed: 0 };
+      activitiesMap.set(a.goal_id, {
+        scheduled: current.scheduled + scheduled,
+        completed: current.completed + completed,
+      });
+    });
+
+    // Get expenses per goal
+    const { data: expenses } = await supabase
+      .from('expenses')
+      .select('goal_id, amount')
+      .eq('user_id', user.id)
+      .in('goal_id', goalIds)
+      .gte('date', startDate)
+      .lte('date', endDate);
+
+    (expenses || []).forEach(e => {
+      if (!e.goal_id) return;
+      expensesMap.set(e.goal_id, (expensesMap.get(e.goal_id) || 0) + Number(e.amount));
+    });
+
+    // Get savings per goal
+    const { data: savings } = await supabase
+      .from('savings_movements')
+      .select('goal_id, amount, movement_type')
+      .eq('user_id', user.id)
+      .in('goal_id', goalIds)
+      .gte('date', startDate)
+      .lte('date', endDate);
+
+    (savings || []).forEach(s => {
+      if (!s.goal_id) return;
+      const amount = Number(s.amount);
+      const value = s.movement_type === 'deposit' ? amount : -amount;
+      savingsMap.set(s.goal_id, (savingsMap.get(s.goal_id) || 0) + value);
+    });
+  }
+
+  // Build metas response
+  const metas: MetaSummaryItem[] = filteredMilestones.map(milestone => {
+    const goal = goalsByTitle.get(milestone.title.toLowerCase());
+    const goalId = goal?.id || null;
+    const activityMetrics = goalId ? activitiesMap.get(goalId) : null;
+    const scheduled = activityMetrics?.scheduled || 0;
+    const completed = activityMetrics?.completed || 0;
+
+    return {
+      id: milestone.id,
+      milestoneId: milestone.id,
+      goalId,
+      title: milestone.title,
+      yearIndex: milestone.year,
+      domainId: milestone.domain_id,
+      domainName: milestone.domain_id ? domainNameMap.get(milestone.domain_id) || null : null,
+      actionsDoneCount: completed,
+      actionsPendingCount: Math.max(0, scheduled - completed),
+      spentTotal: goalId ? expensesMap.get(goalId) || 0 : 0,
+      savedTotal: goalId ? savingsMap.get(goalId) || 0 : 0,
+    };
+  });
+
+  return {
+    planId: activePlan.id,
+    odysseyId: odyssey.id,
+    odysseyTitle: odyssey.title,
+    availableYears,
+    selectedYearIndex: yearIndex,
+    metas,
   };
 }

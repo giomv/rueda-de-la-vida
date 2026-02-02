@@ -27,12 +27,12 @@ export function ActionGridsSection({ data }: ActionGridsSectionProps) {
       <DailyGrid data={daily} daysInMonth={daysInMonth} />
 
       {/* Weekly + Monthly side by side on desktop */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <WeeklyGrid data={weekly} weekBuckets={weekBuckets} />
         <MonthlyGrid data={monthly} weekBuckets={weekBuckets} />
-        <OnceGrid data={once} />
       </div>
 
+      <OnceGrid data={once} />
       {/* Once Grid */}
     </div>
   );
