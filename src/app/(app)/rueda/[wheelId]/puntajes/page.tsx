@@ -23,10 +23,30 @@ export default function PuntajesPage() {
     async function load() {
       const data = await getWheelData(wheelId);
       setWheelId(wheelId);
+
+      // Initialize default scores (5) for domains that don't have a score yet
+      const existingScoreIds = new Set(data.scores.map((s) => s.domain_id));
+      const defaultScores = data.domains
+        .filter((d) => !existingScoreIds.has(d.id))
+        .map((d) => ({
+          id: crypto.randomUUID(),
+          wheel_id: wheelId,
+          domain_id: d.id,
+          score: 5,
+          notes: null,
+          scored_at: new Date().toISOString(),
+        }));
+
       hydrate({
         domains: data.domains,
-        scores: data.scores,
+        scores: [...data.scores, ...defaultScores],
       });
+
+      // Mark as dirty if we added default scores so they get saved
+      if (defaultScores.length > 0) {
+        useWizardStore.setState({ isDirty: true });
+      }
+
       setLoading(false);
     }
     load();
