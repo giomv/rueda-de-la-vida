@@ -1,6 +1,7 @@
 'use client';
 
 import { MONTH_NAMES } from '@/lib/types/finances';
+import { formatCurrency } from '@/lib/utils/format-currency';
 
 interface AnnualTrendChartProps {
   data: { month: number; actual: number }[];
@@ -25,7 +26,7 @@ export function AnnualTrendChart({ data }: AnnualTrendChartProps) {
               />
             </div>
             <span className="text-xs font-medium w-20 text-right">
-              ${item.actual.toLocaleString('es-MX', { maximumFractionDigits: 0 })}
+              {formatCurrency(item.actual)}
             </span>
           </div>
         );

@@ -2,6 +2,7 @@
 
 import { Receipt } from 'lucide-react';
 import { ExpenseCard } from './ExpenseCard';
+import { formatCurrencyWithDecimals } from '@/lib/utils/format-currency';
 import type { ExpenseWithRelations } from '@/lib/types/finances';
 
 interface ExpenseListProps {
@@ -69,7 +70,7 @@ export function ExpenseList({ expenses, onExpenseDelete }: ExpenseListProps) {
               {formatDateHeader(date)}
             </h3>
             <span className="text-sm font-medium">
-              ${calculateDayTotal(groupedExpenses[date]).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+              {formatCurrencyWithDecimals(calculateDayTotal(groupedExpenses[date]))}
             </span>
           </div>
           <div className="space-y-2">

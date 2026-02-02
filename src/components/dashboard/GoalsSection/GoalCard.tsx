@@ -4,20 +4,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils/format-currency';
 import type { GoalProgress } from '@/lib/types/dashboard';
 
 interface GoalCardProps {
   data: GoalProgress;
   onClick?: () => void;
-}
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
 }
 
 export function GoalCard({ data, onClick }: GoalCardProps) {

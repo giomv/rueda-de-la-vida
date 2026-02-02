@@ -5,20 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Wallet, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils/format-currency';
 import type { FinanceSummary } from '@/lib/types/dashboard';
 import { useDashboardStore } from '@/lib/stores/dashboard-store';
 
 interface FinanceSummaryCardProps {
   summary: FinanceSummary | null;
-}
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
 }
 
 export function FinanceSummaryCard({ summary }: FinanceSummaryCardProps) {

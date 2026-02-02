@@ -1,21 +1,13 @@
 'use client';
 
 import { cn } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils/format-currency';
 
 interface KPICardProps {
   label: string;
   value: number;
   className?: string;
   isNegative?: boolean;
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
 }
 
 export function KPICard({ label, value, className, isNegative }: KPICardProps) {

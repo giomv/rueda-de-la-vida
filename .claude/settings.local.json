@@ -9,7 +9,9 @@
       "Bash(git diff:*)",
       "Bash(npx next build:*)",
       "Bash(npx jest:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(xargs:*)",
+      "Bash(npx eslint:*)"
     ]
   },
   "hooks": {

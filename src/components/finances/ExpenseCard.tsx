@@ -22,6 +22,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
+import { formatCurrencyWithDecimals } from '@/lib/utils/format-currency';
 import { deleteExpense } from '@/lib/actions/finances-actions';
 import type { ExpenseWithRelations } from '@/lib/types/finances';
 
@@ -29,14 +30,6 @@ interface ExpenseCardProps {
   expense: ExpenseWithRelations;
   onDelete?: () => void;
   className?: string;
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-    minimumFractionDigits: 2,
-  }).format(value);
 }
 
 function formatDate(dateStr: string): string {
@@ -74,7 +67,7 @@ export function ExpenseCard({ expense, onDelete, className }: ExpenseCardProps) 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-lg">
-                  {formatCurrency(expense.amount)}
+                  {formatCurrencyWithDecimals(expense.amount)}
                 </span>
                 {expense.budget_account && (
                   <span className="text-xs bg-muted px-2 py-0.5 rounded-full">

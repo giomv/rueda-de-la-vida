@@ -118,6 +118,12 @@ export interface ActivityFeedItem {
   timestamp: string;
 }
 
+export interface ActivityFeedResponse {
+  items: ActivityFeedItem[];
+  nextCursor: string | null;
+  hasMore: boolean;
+}
+
 // ===== SAVINGS MOVEMENT TYPES =====
 
 export type MovementType = 'deposit' | 'withdrawal';
@@ -212,3 +218,57 @@ export const SATISFACTION_SCALE = [
   { value: 4, label: 'Bien' },
   { value: 5, label: 'Excelente' },
 ];
+
+// ===== ACTION GRID TYPES =====
+
+export interface WeekBucket {
+  index: number;
+  label: string;
+  start: string;
+  end: string;
+  isoWeekKey: string;
+}
+
+export interface DailyGridData {
+  actions: Array<{
+    id: string;
+    name: string;
+    statusByDay: Record<number, boolean>;
+  }>;
+}
+
+export interface WeeklyGridData {
+  actions: Array<{
+    id: string;
+    name: string;
+    statusByWeekIndex: Record<number, boolean>;
+  }>;
+}
+
+export interface MonthlyGridData {
+  actions: Array<{
+    id: string;
+    name: string;
+    completedWeekIndex: number | null;
+    statusByWeekIndex: Record<number, boolean>;
+  }>;
+}
+
+export interface OnceGridData {
+  actions: Array<{
+    id: string;
+    name: string;
+    completed: boolean;
+    completedAt: string | null;
+  }>;
+}
+
+export interface ActionGridData {
+  month: string;
+  daysInMonth: number;
+  weekBuckets: WeekBucket[];
+  daily: DailyGridData;
+  weekly: WeeklyGridData;
+  monthly: MonthlyGridData;
+  once: OnceGridData;
+}

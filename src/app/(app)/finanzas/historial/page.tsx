@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { FinancesTabs, ExpenseList, FinancesFilters } from '@/components/finances';
 import { getExpensesForDateRange } from '@/lib/actions/finances-actions';
+import { formatCurrencyWithDecimals } from '@/lib/utils/format-currency';
 import type { ExpenseWithRelations } from '@/lib/types/finances';
 
 function getDefaultDateRange(): { startDate: string; endDate: string } {
@@ -85,7 +86,7 @@ export default function HistorialPage() {
       <div className="mb-6 p-4 bg-muted rounded-lg">
         <p className="text-sm text-muted-foreground">Total del periodo</p>
         <p className="text-2xl font-bold">
-          ${total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+          {formatCurrencyWithDecimals(total)}
         </p>
         <p className="text-sm text-muted-foreground">
           {expenses.length} transacciones

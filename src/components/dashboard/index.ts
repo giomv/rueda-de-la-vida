@@ -35,3 +35,13 @@ export { CelebrationBanner } from './WeeklyCheckin/CelebrationBanner';
 export { SummarySkeleton } from './skeletons/SummarySkeleton';
 export { ListSkeleton } from './skeletons/ListSkeleton';
 export { FeedSkeleton } from './skeletons/FeedSkeleton';
+
+// Action Grids
+export { ActionGridsSection } from './ActionGrids/ActionGridsSection';
+export { DailyGrid } from './ActionGrids/DailyGrid';
+export { WeeklyGrid } from './ActionGrids/WeeklyGrid';
+export { MonthlyGrid } from './ActionGrids/MonthlyGrid';
+export { OnceGrid } from './ActionGrids/OnceGrid';
+export { StatusCircle } from './ActionGrids/StatusCircle';
+export { GridLegend } from './ActionGrids/GridLegend';
+export { GridSkeleton } from './ActionGrids/GridSkeleton';

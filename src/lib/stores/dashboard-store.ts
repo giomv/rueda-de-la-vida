@@ -11,6 +11,7 @@ import type {
   PendingItem,
   ActivityFeedItem,
   Celebration,
+  ActionGridData,
 } from '@/lib/types/dashboard';
 import type { LifeDomain, Goal } from '@/lib/types';
 
@@ -29,7 +30,10 @@ interface DashboardState {
   focusItems: FocusItem[];
   pendingItems: PendingItem[];
   activityFeed: ActivityFeedItem[];
+  activityNextCursor: string | null;
+  activityHasMore: boolean;
   celebration: Celebration | null;
+  actionGridData: ActionGridData | null;
 
   // Reference data
   domains: LifeDomain[];
@@ -37,6 +41,7 @@ interface DashboardState {
 
   // UI state
   isLoading: boolean;
+  isLoadingMoreActivity: boolean;
   hasActivePlan: boolean;
 
   // Filter actions
@@ -55,7 +60,11 @@ interface DashboardState {
   setFocusItems: (f: FocusItem[]) => void;
   setPendingItems: (p: PendingItem[]) => void;
   setActivityFeed: (a: ActivityFeedItem[]) => void;
+  appendActivityFeed: (a: ActivityFeedItem[]) => void;
+  setActivityNextCursor: (c: string | null) => void;
+  setActivityHasMore: (h: boolean) => void;
   setCelebration: (c: Celebration | null) => void;
+  setActionGridData: (data: ActionGridData | null) => void;
 
   // Reference data setters
   setDomains: (d: LifeDomain[]) => void;
@@ -63,6 +72,7 @@ interface DashboardState {
 
   // UI setters
   setIsLoading: (l: boolean) => void;
+  setIsLoadingMoreActivity: (l: boolean) => void;
   setHasActivePlan: (h: boolean) => void;
 
   // Bulk update
@@ -85,12 +95,16 @@ const initialState = {
   focusItems: [],
   pendingItems: [],
   activityFeed: [],
+  activityNextCursor: null,
+  activityHasMore: false,
   celebration: null,
+  actionGridData: null,
 
   domains: [],
   goals: [],
 
   isLoading: true,
+  isLoadingMoreActivity: false,
   hasActivePlan: true,
 };
 
@@ -128,7 +142,13 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   setFocusItems: (focusItems) => set({ focusItems }),
   setPendingItems: (pendingItems) => set({ pendingItems }),
   setActivityFeed: (activityFeed) => set({ activityFeed }),
+  appendActivityFeed: (items) => set((state) => ({
+    activityFeed: [...state.activityFeed, ...items]
+  })),
+  setActivityNextCursor: (activityNextCursor) => set({ activityNextCursor }),
+  setActivityHasMore: (activityHasMore) => set({ activityHasMore }),
   setCelebration: (celebration) => set({ celebration }),
+  setActionGridData: (actionGridData) => set({ actionGridData }),
 
   // Reference data setters
   setDomains: (domains) => set({ domains }),
@@ -136,6 +156,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
 
   // UI setters
   setIsLoading: (isLoading) => set({ isLoading }),
+  setIsLoadingMoreActivity: (isLoadingMoreActivity) => set({ isLoadingMoreActivity }),
   setHasActivePlan: (hasActivePlan) => set({ hasActivePlan }),
 
   // Bulk update

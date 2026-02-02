@@ -118,7 +118,7 @@ export function BudgetAccountForm({
             <Label htmlFor="baseBudget">Presupuesto base</Label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                $
+                S/
               </span>
               <Input
                 id="baseBudget"
@@ -127,7 +127,7 @@ export function BudgetAccountForm({
                 min="0"
                 value={baseBudget}
                 onChange={(e) => setBaseBudget(e.target.value)}
-                className="pl-7"
+                className="pl-9"
               />
             </div>
           </div>

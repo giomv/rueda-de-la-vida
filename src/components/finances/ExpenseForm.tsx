@@ -106,7 +106,7 @@ export function ExpenseForm({ expense, onSuccess }: ExpenseFormProps) {
         <Label htmlFor="amount">Monto</Label>
         <div className="relative">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-            $
+            S/
           </span>
           <Input
             id="amount"
@@ -116,7 +116,7 @@ export function ExpenseForm({ expense, onSuccess }: ExpenseFormProps) {
             placeholder="0.00"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            className="pl-7 text-2xl h-14"
+            className="pl-9 text-2xl h-14"
             required
             autoFocus
           />

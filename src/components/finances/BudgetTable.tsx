@@ -9,20 +9,12 @@ import { BudgetAccountForm } from './BudgetAccountForm';
 import { KPICard } from './KPICard';
 import { OverspendingAlert } from './OverspendingAlert';
 import { copyBudgetFromPreviousMonth } from '@/lib/actions/finances-actions';
+import { formatCurrency } from '@/lib/utils/format-currency';
 import type { BudgetSummary, BudgetAccountWithActual, BudgetCategory } from '@/lib/types/finances';
 
 interface BudgetTableProps {
   summary: BudgetSummary;
   onRefresh: () => void;
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
 }
 
 const categoryOrder: BudgetCategory[] = ['INCOME', 'EXPENSE', 'SAVINGS'];

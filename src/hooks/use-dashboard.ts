@@ -12,6 +12,7 @@ import {
   getDomains,
   getGoals,
   hasActivePlan as checkHasActivePlan,
+  getActionGridData,
 } from '@/lib/actions/dashboard-actions';
 
 export function useDashboard() {
@@ -43,19 +44,21 @@ export function useDashboard() {
         domainsProgress,
         goalsProgress,
         pendingItems,
-        activityFeed,
+        activityResponse,
         celebration,
         domains,
         goals,
+        actionGridData,
       ] = await Promise.all([
         getDashboardSummary(filters),
         getDomainsProgress(filters),
         getGoalsProgress(filters),
         getSmartPendingItems(),
-        getRecentActivity(filters),
+        getRecentActivity(filters, 10),
         getCelebration(),
         getDomains(),
         getGoals(filters.domainId),
+        getActionGridData(filters),
       ]);
 
       // Update store with all data
@@ -66,10 +69,13 @@ export function useDashboard() {
         domainsProgress,
         goalsProgress,
         pendingItems,
-        activityFeed,
+        activityFeed: activityResponse.items,
+        activityNextCursor: activityResponse.nextCursor,
+        activityHasMore: activityResponse.hasMore,
         celebration,
         domains,
         goals,
+        actionGridData,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error desconocido');
@@ -93,6 +99,28 @@ export function useDashboard() {
     updateGoals();
   }, [store.domainId]);
 
+  // Load more activity items
+  const loadMoreActivity = useCallback(async () => {
+    if (!store.activityHasMore || store.isLoadingMoreActivity) return;
+
+    store.setIsLoadingMoreActivity(true);
+    try {
+      const filters = store.getFilters();
+      const response = await getRecentActivity(
+        filters,
+        10,
+        store.activityNextCursor || undefined
+      );
+      store.appendActivityFeed(response.items);
+      store.setActivityNextCursor(response.nextCursor);
+      store.setActivityHasMore(response.hasMore);
+    } catch (err) {
+      console.error('Error loading more activity:', err);
+    } finally {
+      store.setIsLoadingMoreActivity(false);
+    }
+  }, [store.activityNextCursor, store.activityHasMore, store.isLoadingMoreActivity]);
+
   return {
     // State
     loading,
@@ -107,7 +135,10 @@ export function useDashboard() {
     goalsProgress: store.goalsProgress,
     pendingItems: store.pendingItems,
     activityFeed: store.activityFeed,
+    activityHasMore: store.activityHasMore,
+    isLoadingMoreActivity: store.isLoadingMoreActivity,
     celebration: store.celebration,
+    actionGridData: store.actionGridData,
 
     // Reference data
     domains: store.domains,
@@ -118,6 +149,7 @@ export function useDashboard() {
 
     // Actions
     refresh: fetchData,
+    loadMoreActivity,
     setYear: store.setYear,
     setMonth: store.setMonth,
     setDomainId: store.setDomainId,

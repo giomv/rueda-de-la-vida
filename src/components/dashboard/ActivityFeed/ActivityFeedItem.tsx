@@ -2,19 +2,11 @@
 
 import { CheckCircle2, Wallet, PiggyBank } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils/format-currency';
 import type { ActivityFeedItem as ActivityFeedItemType } from '@/lib/types/dashboard';
 
 interface ActivityFeedItemProps {
   item: ActivityFeedItemType;
-}
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
 }
 
 function formatTime(timestamp: string): string {

@@ -22,6 +22,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils/format-currency';
 import { updateBudgetAccount, deleteBudgetAccount } from '@/lib/actions/finances-actions';
 import type { BudgetAccountWithActual } from '@/lib/types/finances';
 
@@ -29,15 +30,6 @@ interface BudgetAccountRowProps {
   account: BudgetAccountWithActual;
   onUpdate?: () => void;
   onEdit?: (account: BudgetAccountWithActual) => void;
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
 }
 
 export function BudgetAccountRow({ account, onUpdate, onEdit }: BudgetAccountRowProps) {

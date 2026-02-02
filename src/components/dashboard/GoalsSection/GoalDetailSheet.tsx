@@ -12,21 +12,13 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Wallet, PiggyBank, Calendar } from 'lucide-react';
 import type { GoalProgress } from '@/lib/types/dashboard';
+import { formatCurrency } from '@/lib/utils/format-currency';
 import { useDashboardStore } from '@/lib/stores/dashboard-store';
 
 interface GoalDetailSheetProps {
   data: GoalProgress | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-}
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
 }
 
 function formatDate(dateStr: string | null): string {

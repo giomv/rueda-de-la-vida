@@ -4,21 +4,13 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils/format-currency';
 import type { DomainProgress, ProgressStatus } from '@/lib/types/dashboard';
 import { STATUS_LABELS, STATUS_COLORS } from '@/lib/types/dashboard';
 
 interface DomainCardProps {
   data: DomainProgress;
   onClick?: () => void;
-}
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
 }
 
 function getStatusVariant(status: ProgressStatus): 'default' | 'secondary' | 'destructive' {

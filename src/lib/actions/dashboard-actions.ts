@@ -11,9 +11,16 @@ import type {
   FocusItem,
   PendingItem,
   ActivityFeedItem,
+  ActivityFeedResponse,
   DashboardCheckinInput,
   Celebration,
   ProgressStatus,
+  ActionGridData,
+  WeekBucket,
+  DailyGridData,
+  WeeklyGridData,
+  MonthlyGridData,
+  OnceGridData,
 } from '@/lib/types/dashboard';
 import type { LifeDomain, Goal, WeeklyCheckin, FrequencyType } from '@/lib/types';
 
@@ -688,8 +695,9 @@ export async function getSmartPendingItems(limit = 5): Promise<PendingItem[]> {
  */
 export async function getRecentActivity(
   filters: DashboardFilters,
-  limit = 20
-): Promise<ActivityFeedItem[]> {
+  limit = 10,
+  cursor?: string
+): Promise<ActivityFeedResponse> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('No autenticado');
@@ -713,9 +721,12 @@ export async function getRecentActivity(
   const activityIds = activities?.map(a => a.id) || [];
   const activityMap = new Map(activities?.map(a => [a.id, a]) || []);
 
+  // Fetch more items than needed to properly determine hasMore
+  const fetchLimit = limit + 1;
+
   // Completed actions
   if (activityIds.length > 0) {
-    const { data: completions } = await supabase
+    let completionsQuery = supabase
       .from('activity_completions')
       .select('id, activity_id, completed_at')
       .in('activity_id', activityIds)
@@ -723,7 +734,13 @@ export async function getRecentActivity(
       .gte('date', startDate)
       .lte('date', endDate)
       .order('completed_at', { ascending: false })
-      .limit(limit);
+      .limit(fetchLimit);
+
+    if (cursor) {
+      completionsQuery = completionsQuery.lt('completed_at', cursor);
+    }
+
+    const { data: completions } = await completionsQuery;
 
     completions?.forEach(c => {
       const activity = activityMap.get(c.activity_id);
@@ -744,10 +761,11 @@ export async function getRecentActivity(
     .gte('date', startDate)
     .lte('date', endDate)
     .order('created_at', { ascending: false })
-    .limit(limit);
+    .limit(fetchLimit);
 
   if (domainId) expensesQuery = expensesQuery.eq('domain_id', domainId);
   if (goalId) expensesQuery = expensesQuery.eq('goal_id', goalId);
+  if (cursor) expensesQuery = expensesQuery.lt('created_at', cursor);
 
   const { data: expenses } = await expensesQuery;
 
@@ -769,10 +787,11 @@ export async function getRecentActivity(
     .gte('date', startDate)
     .lte('date', endDate)
     .order('created_at', { ascending: false })
-    .limit(limit);
+    .limit(fetchLimit);
 
   if (domainId) savingsQuery = savingsQuery.eq('domain_id', domainId);
   if (goalId) savingsQuery = savingsQuery.eq('goal_id', goalId);
+  if (cursor) savingsQuery = savingsQuery.lt('created_at', cursor);
 
   const { data: savingsData } = await savingsQuery;
 
@@ -787,9 +806,16 @@ export async function getRecentActivity(
   });
 
   // Sort by timestamp descending
-  return feed
-    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-    .slice(0, limit);
+  const sortedFeed = feed.sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  );
+
+  // Take only the requested limit
+  const items = sortedFeed.slice(0, limit);
+  const hasMore = sortedFeed.length > limit;
+  const nextCursor = hasMore && items.length > 0 ? items[items.length - 1].timestamp : null;
+
+  return { items, nextCursor, hasMore };
 }
 
 // ===== WEEKLY CHECK-IN =====
@@ -956,4 +982,236 @@ export async function hasActivePlan(): Promise<boolean> {
     .single();
 
   return !!odyssey;
+}
+
+// ===== ACTION GRID DATA =====
+
+/**
+ * Calculate week buckets for a given month
+ * Returns calendar weeks that intersect with the month, labeled "Semana 1..W"
+ */
+function calculateWeekBuckets(year: number, month: number): WeekBucket[] {
+  const buckets: WeekBucket[] = [];
+  const firstDayOfMonth = new Date(year, month - 1, 1);
+  const lastDayOfMonth = new Date(year, month, 0);
+  const daysInMonth = lastDayOfMonth.getDate();
+
+  let currentDate = new Date(firstDayOfMonth);
+  let weekIndex = 1;
+
+  while (currentDate <= lastDayOfMonth) {
+    // Find start of the week (Sunday)
+    const dayOfWeek = currentDate.getDay();
+    const weekStart = new Date(currentDate);
+
+    // For the first week, the start is the first day of the month
+    // For subsequent weeks, go back to Sunday
+    if (weekIndex > 1 || dayOfWeek === 0) {
+      // Already at Sunday or first day of month
+    }
+
+    // Find end of the week (Saturday) or end of month
+    const weekEnd = new Date(currentDate);
+    const daysUntilSaturday = 6 - weekEnd.getDay();
+    weekEnd.setDate(weekEnd.getDate() + daysUntilSaturday);
+
+    // Cap at end of month
+    if (weekEnd > lastDayOfMonth) {
+      weekEnd.setTime(lastDayOfMonth.getTime());
+    }
+
+    // Calculate ISO week key
+    const isoWeekNum = getISOWeek(currentDate);
+    const isoYear = getISOWeekYear(currentDate);
+    const isoWeekKey = `${isoYear}-W${String(isoWeekNum).padStart(2, '0')}`;
+
+    buckets.push({
+      index: weekIndex,
+      label: `Semana ${weekIndex}`,
+      start: formatDateYMD(currentDate),
+      end: formatDateYMD(weekEnd),
+      isoWeekKey,
+    });
+
+    // Move to next Sunday
+    currentDate = new Date(weekEnd);
+    currentDate.setDate(currentDate.getDate() + 1);
+    weekIndex++;
+  }
+
+  return buckets;
+}
+
+function getISOWeekYear(date: Date): number {
+  const d = new Date(date);
+  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+  return d.getFullYear();
+}
+
+function formatDateYMD(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Get action grid data for the dashboard
+ */
+export async function getActionGridData(filters: DashboardFilters): Promise<ActionGridData> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('No autenticado');
+
+  const { year, month, domainId, goalId } = filters;
+  const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+  const endDate = getLastDayOfMonth(year, month);
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const weekBuckets = calculateWeekBuckets(year, month);
+  const monthStr = `${year}-${String(month).padStart(2, '0')}`;
+
+  // Fetch all non-archived activities
+  let activitiesQuery = supabase
+    .from('lifeplan_activities')
+    .select('id, title, frequency_type, domain_id, goal_id')
+    .eq('user_id', user.id)
+    .eq('is_archived', false);
+
+  if (domainId) activitiesQuery = activitiesQuery.eq('domain_id', domainId);
+  if (goalId) activitiesQuery = activitiesQuery.eq('goal_id', goalId);
+
+  const { data: activities } = await activitiesQuery;
+
+  if (!activities?.length) {
+    return {
+      month: monthStr,
+      daysInMonth,
+      weekBuckets,
+      daily: { actions: [] },
+      weekly: { actions: [] },
+      monthly: { actions: [] },
+      once: { actions: [] },
+    };
+  }
+
+  // Group activities by frequency type
+  const dailyActivities = activities.filter(a => a.frequency_type === 'DAILY');
+  const weeklyActivities = activities.filter(a => a.frequency_type === 'WEEKLY');
+  const monthlyActivities = activities.filter(a => a.frequency_type === 'MONTHLY');
+  const onceActivities = activities.filter(a => a.frequency_type === 'ONCE');
+
+  // Fetch all completions for the month
+  const activityIds = activities.map(a => a.id);
+  const { data: completions } = await supabase
+    .from('activity_completions')
+    .select('activity_id, period_key, completed, completed_at, date')
+    .in('activity_id', activityIds)
+    .eq('completed', true)
+    .gte('date', startDate)
+    .lte('date', endDate);
+
+  const completionsList = completions || [];
+
+  // Build ISO week key to bucket index map
+  const weekKeyToIndex = new Map<string, number>();
+  weekBuckets.forEach(bucket => {
+    weekKeyToIndex.set(bucket.isoWeekKey, bucket.index);
+  });
+
+  // Build daily grid data
+  const daily: DailyGridData = {
+    actions: dailyActivities.map(activity => {
+      const statusByDay: Record<number, boolean> = {};
+      completionsList
+        .filter(c => c.activity_id === activity.id)
+        .forEach(c => {
+          // period_key for daily is YYYY-MM-DD
+          const dayMatch = c.period_key.match(/^\d{4}-\d{2}-(\d{2})$/);
+          if (dayMatch) {
+            const day = parseInt(dayMatch[1], 10);
+            statusByDay[day] = true;
+          }
+        });
+      return {
+        id: activity.id,
+        name: activity.title,
+        statusByDay,
+      };
+    }),
+  };
+
+  // Build weekly grid data
+  const weekly: WeeklyGridData = {
+    actions: weeklyActivities.map(activity => {
+      const statusByWeekIndex: Record<number, boolean> = {};
+      completionsList
+        .filter(c => c.activity_id === activity.id)
+        .forEach(c => {
+          // period_key for weekly is YYYY-Www
+          const weekIndex = weekKeyToIndex.get(c.period_key);
+          if (weekIndex !== undefined) {
+            statusByWeekIndex[weekIndex] = true;
+          }
+        });
+      return {
+        id: activity.id,
+        name: activity.title,
+        statusByWeekIndex,
+      };
+    }),
+  };
+
+  // Build monthly grid data
+  const monthly: MonthlyGridData = {
+    actions: monthlyActivities.map(activity => {
+      const completion = completionsList.find(c => c.activity_id === activity.id);
+      let completedWeekIndex: number | null = null;
+      const statusByWeekIndex: Record<number, boolean> = {};
+
+      if (completion && completion.completed_at) {
+        // Find which week the completion occurred in
+        const completedDate = new Date(completion.completed_at);
+        for (const bucket of weekBuckets) {
+          const bucketStart = new Date(bucket.start);
+          const bucketEnd = new Date(bucket.end);
+          bucketEnd.setHours(23, 59, 59, 999);
+          if (completedDate >= bucketStart && completedDate <= bucketEnd) {
+            completedWeekIndex = bucket.index;
+            statusByWeekIndex[bucket.index] = true;
+            break;
+          }
+        }
+      }
+
+      return {
+        id: activity.id,
+        name: activity.title,
+        completedWeekIndex,
+        statusByWeekIndex,
+      };
+    }),
+  };
+
+  // Build once grid data
+  const once: OnceGridData = {
+    actions: onceActivities.map(activity => {
+      const completion = completionsList.find(c => c.activity_id === activity.id);
+      return {
+        id: activity.id,
+        name: activity.title,
+        completed: !!completion,
+        completedAt: completion?.completed_at || null,
+      };
+    }),
+  };
+
+  return {
+    month: monthStr,
+    daysInMonth,
+    weekBuckets,
+    daily,
+    weekly,
+    monthly,
+    once,
+  };
 }

@@ -4,19 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { KPICard } from './KPICard';
 import { AnnualTrendChart } from './AnnualTrendChart';
 import { MONTH_NAMES } from '@/lib/types/finances';
+import { formatCurrency } from '@/lib/utils/format-currency';
 import type { AnnualSummary as AnnualSummaryType } from '@/lib/types/finances';
 
 interface AnnualSummaryProps {
   summary: AnnualSummaryType;
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
 }
 
 export function AnnualSummary({ summary }: AnnualSummaryProps) {

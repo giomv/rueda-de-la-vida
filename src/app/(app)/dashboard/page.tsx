@@ -18,6 +18,8 @@ import {
   SummarySkeleton,
   ListSkeleton,
   FeedSkeleton,
+  ActionGridsSection,
+  GridSkeleton,
 } from '@/components/dashboard';
 
 export default function DashboardPage() {
@@ -35,6 +37,10 @@ export default function DashboardPage() {
     goalsProgress,
     pendingItems,
     activityFeed,
+    activityHasMore,
+    isLoadingMoreActivity,
+    loadMoreActivity,
+    actionGridData,
     filters,
   } = useDashboard();
 
@@ -66,7 +72,18 @@ export default function DashboardPage() {
       {/* Sticky Filters */}
       <DashboardFilters className="sticky top-0 z-10 bg-background pb-4 mb-4" />
 
+      {/* Action Grids Section */}
+      <section className="mb-6">
+        <h2 className="text-lg font-semibold mb-3">Progreso de acciones</h2>
+        {loading ? (
+          <GridSkeleton />
+        ) : (
+          <ActionGridsSection data={actionGridData} />
+        )}
+      </section>
+
       {/* Celebration Banner */}
+      <h2 className="text-lg font-semibold mb-3">Mi resumen del mes</h2>
       <CelebrationBanner className="mb-4" />
 
       {/* Summary Section */}
@@ -112,11 +129,16 @@ export default function DashboardPage() {
 
       {/* Activity Feed */}
       <section className="mb-6">
-        <h2 className="text-lg font-semibold mb-3">Actividad reciente</h2>
+        <h2 className="text-lg font-semibold mb-3">La actividad reciente</h2>
         {loading ? (
           <FeedSkeleton count={5} />
         ) : (
-          <ActivityFeedList items={activityFeed} />
+          <ActivityFeedList
+            items={activityFeed}
+            hasMore={activityHasMore}
+            isLoadingMore={isLoadingMoreActivity}
+            onLoadMore={loadMoreActivity}
+          />
         )}
       </section>
 

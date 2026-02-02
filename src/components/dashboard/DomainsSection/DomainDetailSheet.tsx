@@ -13,21 +13,13 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Wallet, PiggyBank } from 'lucide-react';
 import type { DomainProgress } from '@/lib/types/dashboard';
 import { STATUS_LABELS } from '@/lib/types/dashboard';
+import { formatCurrency } from '@/lib/utils/format-currency';
 import { useDashboardStore } from '@/lib/stores/dashboard-store';
 
 interface DomainDetailSheetProps {
   data: DomainProgress | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-}
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
 }
 
 export function DomainDetailSheet({ data, open, onOpenChange }: DomainDetailSheetProps) {

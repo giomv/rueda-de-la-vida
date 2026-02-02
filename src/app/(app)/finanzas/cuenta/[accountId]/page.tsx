@@ -6,6 +6,7 @@ import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ExpenseList } from '@/components/finances';
 import { getExpensesByAccount } from '@/lib/actions/finances-actions';
+import { formatCurrencyWithDecimals } from '@/lib/utils/format-currency';
 import type { ExpenseWithRelations } from '@/lib/types/finances';
 
 export default function CuentaPage({
@@ -64,7 +65,7 @@ export default function CuentaPage({
       <div className="mb-6 p-4 bg-muted rounded-lg">
         <p className="text-sm text-muted-foreground">Total</p>
         <p className="text-2xl font-bold">
-          ${total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+          {formatCurrencyWithDecimals(total)}
         </p>
       </div>
 
