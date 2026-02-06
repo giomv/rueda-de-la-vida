@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import { getOrCreateMonthlyBudget } from '@/lib/actions/finances-actions';
 import type {
   SavingsMovement,
   SavingsMovementWithRelations,
@@ -17,17 +18,30 @@ export async function createSavingsMovement(input: CreateSavingsInput): Promise<
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('No autenticado');
 
+  // Parse year/month from date for budget lookup
+  const [year, month] = input.date.split('-').map(Number);
+
+  // Determine the account ID
+  let accountId = input.budget_account_id;
+
   // Validate account is SAVINGS category if provided
-  if (input.budget_account_id) {
+  if (accountId) {
     const { data: account } = await supabase
       .from('budget_accounts')
       .select('category')
-      .eq('id', input.budget_account_id)
+      .eq('id', accountId)
       .single();
 
     if (account?.category !== 'SAVINGS') {
       throw new Error('La cuenta debe ser de tipo Ahorros');
     }
+  } else {
+    // Auto-assign to SAVINGS "Otros" account when none selected
+    const budget = await getOrCreateMonthlyBudget(year, month);
+    const otrosSavings = budget.accounts.find(
+      (a) => a.is_otros_account && a.category === 'SAVINGS'
+    );
+    accountId = otrosSavings?.id || null;
   }
 
   const { data, error } = await supabase
@@ -36,7 +50,7 @@ export async function createSavingsMovement(input: CreateSavingsInput): Promise<
       user_id: user.id,
       amount: input.amount,
       date: input.date,
-      budget_account_id: input.budget_account_id || null,
+      budget_account_id: accountId,
       domain_id: input.domain_id || null,
       goal_id: input.goal_id || null,
       note: input.note || null,

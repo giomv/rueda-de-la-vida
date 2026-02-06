@@ -1,21 +1,18 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { ChevronDown, Plus, Check, X, Search } from 'lucide-react';
+import { ChevronDown, Check, X, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { GoalWithYear } from '@/lib/types/dashboard';
 
-interface SearchableGoalSelectProps {
+interface SearchableGoalFilterProps {
   goals: GoalWithYear[];
   value: string | null;
-  onChange: (value: string | null) => void;
-  onNewGoal: () => void;
-  placeholder?: string;
+  onChange: (goalId: string | null) => void;
+  onGoalSelected?: (goal: GoalWithYear) => void;
+  disabled?: boolean;
   className?: string;
 }
-
-const MIN_SEARCH_CHARS = 3;
-const THROTTLE_MS = 3000;
 
 // Group goals by year for display
 interface GoalGroup {
@@ -24,24 +21,21 @@ interface GoalGroup {
   goals: GoalWithYear[];
 }
 
-export function SearchableGoalSelect({
+export function SearchableGoalFilter({
   goals,
   value,
   onChange,
-  onNewGoal,
-  placeholder = 'Seleccionar meta',
+  onGoalSelected,
+  disabled = false,
   className,
-}: SearchableGoalSelectProps) {
+}: SearchableGoalFilterProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [throttledSearchTerm, setThrottledSearchTerm] = useState('');
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
-  const throttleTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const lastThrottleTimeRef = useRef<number>(0);
 
   // Find selected goal
   const selectedGoal = useMemo(
@@ -49,53 +43,16 @@ export function SearchableGoalSelect({
     [goals, value]
   );
 
-  // Throttle search term updates (3 seconds)
-  useEffect(() => {
-    if (searchTerm.length < MIN_SEARCH_CHARS) {
-      // Reset immediately when below threshold
-      setThrottledSearchTerm('');
-      if (throttleTimerRef.current) {
-        clearTimeout(throttleTimerRef.current);
-        throttleTimerRef.current = null;
-      }
-      return;
-    }
-
-    const now = Date.now();
-    const timeSinceLastThrottle = now - lastThrottleTimeRef.current;
-
-    if (timeSinceLastThrottle >= THROTTLE_MS) {
-      // Enough time has passed, update immediately
-      setThrottledSearchTerm(searchTerm);
-      lastThrottleTimeRef.current = now;
-    } else {
-      // Schedule update for remaining time
-      if (throttleTimerRef.current) {
-        clearTimeout(throttleTimerRef.current);
-      }
-      throttleTimerRef.current = setTimeout(() => {
-        setThrottledSearchTerm(searchTerm);
-        lastThrottleTimeRef.current = Date.now();
-      }, THROTTLE_MS - timeSinceLastThrottle);
-    }
-
-    return () => {
-      if (throttleTimerRef.current) {
-        clearTimeout(throttleTimerRef.current);
-      }
-    };
-  }, [searchTerm]);
-
-  // Filter goals based on throttled search term
+  // Filter goals based on search term (immediate, case-insensitive, substring)
   const filteredGoals = useMemo(() => {
-    if (throttledSearchTerm.length < MIN_SEARCH_CHARS) {
+    if (!searchTerm.trim()) {
       return goals;
     }
-    const lowerSearch = throttledSearchTerm.toLowerCase();
+    const lowerSearch = searchTerm.toLowerCase().trim();
     return goals.filter((goal) =>
       goal.title.toLowerCase().includes(lowerSearch)
     );
-  }, [goals, throttledSearchTerm]);
+  }, [goals, searchTerm]);
 
   // Group filtered goals by year
   const groupedGoals = useMemo(() => {
@@ -109,11 +66,6 @@ export function SearchableGoalSelect({
         yearMap.set(key, []);
       }
       yearMap.get(key)!.push(goal);
-    });
-
-    // Sort goals within each year alphabetically
-    yearMap.forEach((yearGoals) => {
-      yearGoals.sort((a, b) => a.title.localeCompare(b.title, 'es'));
     });
 
     // Convert to array and sort by year (nulls last)
@@ -134,15 +86,14 @@ export function SearchableGoalSelect({
   }, [filteredGoals]);
 
   // Build flat list of navigable items for keyboard navigation
-  // Items: "Sin meta" + "Nueva meta" + (goal, goal, header, goal, ...)
+  // Items: "Todas las metas" + (header, goal, goal, header, goal, ...)
   type DisplayItem =
-    | { type: 'none' }
-    | { type: 'new' }
+    | { type: 'all' }
     | { type: 'header'; label: string; yearIndex: number | null }
     | { type: 'goal'; goal: GoalWithYear };
 
   const displayItems = useMemo(() => {
-    const items: DisplayItem[] = [{ type: 'none' }, { type: 'new' }];
+    const items: DisplayItem[] = [{ type: 'all' }];
 
     groupedGoals.forEach((group) => {
       // Add header for each group
@@ -156,15 +107,15 @@ export function SearchableGoalSelect({
     return items;
   }, [groupedGoals]);
 
-  // Get selectable items only (for keyboard navigation) - excludes headers
+  // Get selectable items only (for keyboard navigation)
   const selectableItems = useMemo(() => {
-    return displayItems.filter((item): item is { type: 'none' } | { type: 'new' } | { type: 'goal'; goal: GoalWithYear } =>
-      item.type === 'none' || item.type === 'new' || item.type === 'goal'
+    return displayItems.filter((item): item is { type: 'all' } | { type: 'goal'; goal: GoalWithYear } =>
+      item.type === 'all' || item.type === 'goal'
     );
   }, [displayItems]);
 
-  // Check if we're in search mode and have no results
-  const isSearching = searchTerm.length >= MIN_SEARCH_CHARS;
+  // Check if we're searching and have no results
+  const isSearching = searchTerm.trim().length > 0;
   const hasNoResults = isSearching && filteredGoals.length === 0;
 
   // Handle click outside to close
@@ -206,20 +157,24 @@ export function SearchableGoalSelect({
     }
   }, [highlightedIndex]);
 
+  const handleSearchChange = useCallback((newValue: string) => {
+    setSearchTerm(newValue);
+    setHighlightedIndex(-1); // Reset highlighted index when search changes
+  }, []);
+
   const handleSelect = useCallback(
-    (item: { type: 'none' } | { type: 'new' } | { type: 'goal'; goal: GoalWithYear }) => {
-      if (item.type === 'none') {
+    (item: { type: 'all' } | { type: 'goal'; goal: GoalWithYear }) => {
+      if (item.type === 'all') {
         onChange(null);
-      } else if (item.type === 'new') {
-        onNewGoal();
       } else if (item.goal) {
         onChange(item.goal.id);
+        onGoalSelected?.(item.goal);
       }
       setIsOpen(false);
       setSearchTerm('');
       setHighlightedIndex(-1);
     },
-    [onChange, onNewGoal]
+    [onChange, onGoalSelected]
   );
 
   const handleKeyDown = useCallback(
@@ -227,13 +182,15 @@ export function SearchableGoalSelect({
       if (!isOpen) {
         if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
           e.preventDefault();
-          setIsOpen(true);
+          if (!disabled) {
+            setIsOpen(true);
+          }
         }
         return;
       }
 
-      // When no results, only "Sin meta" and "Nueva meta" are navigable
-      const maxIndex = hasNoResults ? 1 : selectableItems.length - 1;
+      // When no results, only "Todas las metas" is navigable
+      const maxIndex = hasNoResults ? 0 : selectableItems.length - 1;
 
       switch (e.key) {
         case 'ArrowDown':
@@ -267,20 +224,8 @@ export function SearchableGoalSelect({
           break;
       }
     },
-    [isOpen, selectableItems, highlightedIndex, handleSelect, hasNoResults]
+    [isOpen, selectableItems, highlightedIndex, handleSelect, hasNoResults, disabled]
   );
-
-  // Build a map of goal id to selectable index for highlighting
-  const goalToSelectableIndex = useMemo(() => {
-    const map = new Map<string, number>();
-    let idx = 2; // Start at 2 since "Sin meta" is 0 and "Nueva meta" is 1
-    groupedGoals.forEach((group) => {
-      group.goals.forEach((goal) => {
-        map.set(goal.id, idx++);
-      });
-    });
-    return map;
-  }, [groupedGoals]);
 
   const handleClear = useCallback(
     (e: React.MouseEvent) => {
@@ -290,15 +235,34 @@ export function SearchableGoalSelect({
     [onChange]
   );
 
+  const handleToggle = () => {
+    if (!disabled) {
+      setIsOpen(!isOpen);
+    }
+  };
+
+  // Build a map of goal id to selectable index for highlighting
+  const goalToSelectableIndex = useMemo(() => {
+    const map = new Map<string, number>();
+    let idx = 1; // Start at 1 since "Todas las metas" is 0
+    groupedGoals.forEach((group) => {
+      group.goals.forEach((goal) => {
+        map.set(goal.id, idx++);
+      });
+    });
+    return map;
+  }, [groupedGoals]);
+
   return (
     <div ref={containerRef} className={cn('relative', className)}>
       {/* Trigger Button */}
       <button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleToggle}
         onKeyDown={handleKeyDown}
+        disabled={disabled}
         className={cn(
-          'flex w-full items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs',
+          'flex w-[180px] items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs',
           'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] outline-none',
           'disabled:cursor-not-allowed disabled:opacity-50',
           'dark:bg-input/30 dark:hover:bg-input/50',
@@ -313,9 +277,7 @@ export function SearchableGoalSelect({
             !selectedGoal && 'text-muted-foreground'
           )}
         >
-          {selectedGoal
-            ? selectedGoal.title
-            : placeholder}
+          {selectedGoal ? selectedGoal.title : 'Todas las metas'}
         </span>
         <div className="flex items-center gap-1">
           {selectedGoal && (
@@ -359,9 +321,9 @@ export function SearchableGoalSelect({
               ref={inputRef}
               type="text"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Buscar meta..."
+              placeholder="Buscar meta…"
               className={cn(
                 'flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground'
               )}
@@ -369,20 +331,14 @@ export function SearchableGoalSelect({
             {searchTerm && (
               <button
                 type="button"
-                onClick={() => setSearchTerm('')}
+                onClick={() => handleSearchChange('')}
                 className="rounded-sm p-0.5 hover:bg-accent"
+                aria-label="Limpiar búsqueda"
               >
                 <X className="h-3 w-3 text-muted-foreground" />
               </button>
             )}
           </div>
-
-          {/* Helper hint when <3 chars */}
-          {searchTerm.length > 0 && searchTerm.length < MIN_SEARCH_CHARS && (
-            <div className="px-3 py-2 text-xs text-muted-foreground">
-              Escribe al menos 3 letras para buscar.
-            </div>
-          )}
 
           {/* Options List */}
           <div
@@ -390,12 +346,12 @@ export function SearchableGoalSelect({
             role="listbox"
             className="max-h-60 overflow-y-auto p-1"
           >
-            {/* Sin meta option */}
+            {/* "Todas las metas" option */}
             <div
               data-selectable
               role="option"
               aria-selected={value === null}
-              onClick={() => handleSelect({ type: 'none' })}
+              onClick={() => handleSelect({ type: 'all' })}
               className={cn(
                 'relative flex cursor-pointer items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-none',
                 'hover:bg-accent hover:text-accent-foreground',
@@ -403,7 +359,7 @@ export function SearchableGoalSelect({
                 value === null && 'font-medium'
               )}
             >
-              Sin meta
+              Todas las metas
               {value === null && (
                 <span className="absolute right-2">
                   <Check className="h-4 w-4" />
@@ -412,24 +368,6 @@ export function SearchableGoalSelect({
             </div>
 
             {/* Separator */}
-            <div className="my-1 h-px bg-border" />
-
-            {/* Nueva meta option */}
-            <div
-              data-selectable
-              role="option"
-              onClick={() => handleSelect({ type: 'new' })}
-              className={cn(
-                'flex cursor-pointer items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-none',
-                'hover:bg-accent hover:text-accent-foreground',
-                highlightedIndex === 1 && 'bg-accent text-accent-foreground'
-              )}
-            >
-              <Plus className="h-4 w-4" />
-              Nueva meta
-            </div>
-
-            {/* Separator before goals list */}
             {(groupedGoals.length > 0 || hasNoResults) && (
               <div className="my-1 h-px bg-border" />
             )}

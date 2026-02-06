@@ -155,8 +155,7 @@ export type WizardStep =
   | 'prioridades'
   | 'reflexion'
   | 'vida-ideal'
-  | 'plan'
-  | 'seguimiento';
+  | 'plan';
 
 export const WIZARD_STEPS: { key: WizardStep; label: string }[] = [
   { key: 'dominios', label: 'Dominios' },
@@ -166,7 +165,6 @@ export const WIZARD_STEPS: { key: WizardStep; label: string }[] = [
   { key: 'reflexion', label: 'Reflexión' },
   { key: 'vida-ideal', label: 'Vida Ideal' },
   { key: 'plan', label: 'Plan' },
-  { key: 'seguimiento', label: 'Seguimiento' },
 ];
 
 export const SUGGESTED_DOMAINS = [

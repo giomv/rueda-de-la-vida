@@ -43,8 +43,8 @@ describe('WizardProgress', () => {
   it('highlights the current step', () => {
     render(<WizardProgress currentStep={2} />);
 
-    // The current step should show step 3 of 8 in mobile view
-    expect(screen.getByText('Paso 3 de 8')).toBeInTheDocument();
+    // The current step should show step 3 of 7 in mobile view
+    expect(screen.getByText('Paso 3 de 7')).toBeInTheDocument();
     // Multiple elements with "Resultado" exist (mobile header + step labels)
     expect(screen.getAllByText('Resultado').length).toBeGreaterThan(0);
   });
@@ -52,9 +52,9 @@ describe('WizardProgress', () => {
   it('shows progress bar based on current step', () => {
     const { container } = render(<WizardProgress currentStep={3} />);
 
-    // Progress should be at 50% (4/8)
+    // Progress should be at ~57% (4/7)
     const progressBar = container.querySelector('[style*="width"]');
-    expect(progressBar).toHaveStyle({ width: '50%' });
+    expect(progressBar).toHaveStyle({ width: `${((3 + 1) / 7) * 100}%` });
   });
 
   it('renders step buttons with correct aria attributes', () => {
@@ -85,11 +85,11 @@ describe('WizardProgress', () => {
 
       render(<WizardProgress currentStep={0} />);
 
-      // Click on last step (Seguimiento)
-      const seguimientoButtons = screen.getAllByRole('button', { name: /Seguimiento/i });
-      fireEvent.click(seguimientoButtons[0]);
+      // Click on last step (Plan)
+      const planButtons = screen.getAllByRole('button', { name: /Plan/i });
+      fireEvent.click(planButtons[0]);
 
-      expect(mockPush).toHaveBeenCalledWith('/rueda/test-wheel-123/seguimiento');
+      expect(mockPush).toHaveBeenCalledWith('/rueda/test-wheel-123/plan');
     });
 
     it('navigates backwards to previous steps', () => {
@@ -243,6 +243,59 @@ describe('WizardProgress', () => {
       currentButtons.forEach((button) => {
         expect(button).toHaveAttribute('aria-current', 'step');
       });
+    });
+  });
+
+  describe('Regression: Seguimiento step removed', () => {
+    it('should not include Seguimiento in the steps', () => {
+      render(<WizardProgress currentStep={0} />);
+
+      // Seguimiento should not appear anywhere in the stepper
+      expect(screen.queryByText('Seguimiento')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Seguimiento/i })).not.toBeInTheDocument();
+    });
+
+    it('should have exactly 7 steps', () => {
+      render(<WizardProgress currentStep={0} />);
+
+      // Verify the wizard has 7 steps
+      expect(WIZARD_STEPS).toHaveLength(7);
+      expect(screen.getByText('Paso 1 de 7')).toBeInTheDocument();
+    });
+
+    it('should have Plan as the final step', () => {
+      render(<WizardProgress currentStep={6} />);
+
+      // Plan is now the last step (index 6)
+      const lastStep = WIZARD_STEPS[WIZARD_STEPS.length - 1];
+      expect(lastStep.key).toBe('plan');
+      expect(lastStep.label).toBe('Plan');
+
+      // Current step should show 7 of 7
+      expect(screen.getByText('Paso 7 de 7')).toBeInTheDocument();
+    });
+
+    it('should navigate through all steps without seguimiento', () => {
+      mockUseWizardStore.mockReturnValue(defaultStoreState);
+
+      // Start from first step
+      const { rerender } = render(<WizardProgress currentStep={0} />);
+
+      // Navigate to each step and verify they work
+      const expectedSteps = ['dominios', 'puntajes', 'resultado', 'prioridades', 'reflexion', 'vida-ideal', 'plan'];
+
+      expectedSteps.forEach((stepKey, index) => {
+        rerender(<WizardProgress currentStep={index} />);
+
+        // Each step should be navigable
+        if (index < expectedSteps.length - 1) {
+          const nextStepButtons = screen.getAllByRole('button', { name: new RegExp(WIZARD_STEPS[index + 1].label, 'i') });
+          expect(nextStepButtons.length).toBeGreaterThan(0);
+        }
+      });
+
+      // Seguimiento should never have been called
+      expect(mockPush).not.toHaveBeenCalledWith(expect.stringContaining('seguimiento'));
     });
   });
 });

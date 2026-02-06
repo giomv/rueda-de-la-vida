@@ -502,8 +502,7 @@ export default function PlanPage() {
             Vida ideal
           </Button>
           <Button onClick={handleContinue} className="flex-1">
-            Seguimiento
-            <ChevronRight className="h-4 w-4 ml-1" />
+            Seguimiento de plan
           </Button>
         </div>
       </div>

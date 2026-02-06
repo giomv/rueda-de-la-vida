@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { CircleDot, Edit3, BarChart3, Target, BookOpen, Lightbulb, ClipboardList, CheckCircle } from 'lucide-react';
+import { CircleDot, Edit3, BarChart3, Target, BookOpen, Lightbulb, ClipboardList } from 'lucide-react';
 
 const steps = [
   {
@@ -37,12 +37,7 @@ const steps = [
   {
     icon: ClipboardList,
     title: '7. Crea tu plan de acción',
-    description: 'Define metas concretas y acciones semanales para cada área prioritaria.',
-  },
-  {
-    icon: CheckCircle,
-    title: '8. Da seguimiento',
-    description: 'Registra tus hábitos diarios y repite la rueda cada 3-6 meses para medir tu progreso.',
+    description: 'Define metas concretas y acciones semanales para cada área prioritaria. Repite la rueda cada 3-6 meses para medir tu progreso.',
   },
 ];
 
@@ -55,7 +50,7 @@ export default function ComoFuncionaPage() {
             ¿Cómo funciona?
           </h1>
           <p className="text-lg text-muted-foreground">
-            8 pasos para evaluar y mejorar el equilibrio en tu vida
+            7 pasos para evaluar y mejorar el equilibrio en tu vida
           </p>
         </div>
 

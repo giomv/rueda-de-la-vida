@@ -547,7 +547,7 @@ describe('Wheel Wizard Flow Integration', () => {
   });
 
   describe('Complete Wizard Flow', () => {
-    it('should complete all 8 steps successfully', () => {
+    it('should complete all 7 steps successfully', () => {
       // Step 0: Initialize wheel and add domains
       useWizardStore.getState().setWheelId('wheel-complete-test');
       useWizardStore.getState().setTitle('Mi Rueda de la Vida Completa');
@@ -600,7 +600,7 @@ describe('Wheel Wizard Flow Integration', () => {
 
       expect(useWizardStore.getState().idealLife).toHaveLength(2);
 
-      // Step 6: Create action plans
+      // Step 6: Create action plans (final step)
       useWizardStore.getState().setCurrentStep(6);
       focusDomains.forEach(p => {
         useWizardStore.getState().updateActionPlan(p.domain_id, {
@@ -623,12 +623,9 @@ describe('Wheel Wizard Flow Integration', () => {
 
       expect(useWizardStore.getState().actionPlans).toHaveLength(2);
 
-      // Step 7: Seguimiento (final step)
-      useWizardStore.getState().setCurrentStep(7);
-
       // Verify final state
       const finalState = useWizardStore.getState();
-      expect(finalState.currentStep).toBe(7);
+      expect(finalState.currentStep).toBe(6);
       expect(finalState.title).toBe('Mi Rueda de la Vida Completa');
       expect(finalState.domains).toHaveLength(6);
       expect(finalState.scores).toHaveLength(6);

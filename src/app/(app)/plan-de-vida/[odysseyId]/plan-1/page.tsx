@@ -11,19 +11,31 @@ import { InspireButton } from '@/components/odyssey/InspireButton';
 import { FeedbackList } from '@/components/odyssey/FeedbackList';
 import { DashboardSliders } from '@/components/odyssey/DashboardSliders';
 import { ExcitementConcern } from '@/components/odyssey/ExcitementConcern';
+import { WheelSelector } from '@/components/odyssey/WheelSelector';
+import { GoalTimelineBuilder } from '@/components/odyssey/GoalTimelineBuilder';
 import { useOdysseyStore } from '@/lib/stores/odyssey-store';
 import { useOdysseyAutoSave } from '@/hooks/use-odyssey-auto-save';
 import { getOdysseyData } from '@/lib/actions/odyssey-actions';
 import { savePlanHeadline, saveMilestones, savePlanDashboard, saveFeedback, updateOdyssey } from '@/lib/actions/odyssey-actions';
 import { getOrCreateDomains } from '@/lib/actions/domain-actions';
+import { getUserWheelsForOdyssey, importWheelGoalsToOdyssey, getOdysseyGoals, assignGoalToYear, unassignGoal } from '@/lib/actions/odyssey-goal-actions';
 import { PLAN_TYPES, INSPIRE_PROMPTS } from '@/lib/types';
-import type { MilestoneCategory, MilestoneTag, OdysseyFeedback } from '@/lib/types';
+import type { MilestoneCategory, MilestoneTag, Wheel, GoalWithAssignment } from '@/lib/types';
 
 export default function Plan1Page() {
   const params = useParams();
   const router = useRouter();
   const odysseyId = params.odysseyId as string;
   const [loading, setLoading] = useState(true);
+
+  // State for wheel selection and goals
+  const [wheels, setWheels] = useState<Pick<Wheel, 'id' | 'title' | 'created_at'>[]>([]);
+  const [selectedWheelId, setSelectedWheelId] = useState<string | null>(null);
+  const [odysseyGoals, setOdysseyGoals] = useState<{
+    unassigned: GoalWithAssignment[];
+    byYear: Record<number, GoalWithAssignment[]>;
+  }>({ unassigned: [], byYear: { 1: [], 2: [], 3: [], 4: [], 5: [] } });
+  const [importingGoals, setImportingGoals] = useState(false);
 
   const {
     plans, milestones, feedback, domains, setOdysseyId, hydrate, setDomains,
@@ -38,12 +50,15 @@ export default function Plan1Page() {
 
   useEffect(() => {
     async function load() {
-      const [data, userDomains] = await Promise.all([
+      const [data, userDomains, userWheels] = await Promise.all([
         getOdysseyData(odysseyId),
         getOrCreateDomains(),
+        getUserWheelsForOdyssey(),
       ]);
       setOdysseyId(odysseyId);
       setDomains(userDomains);
+      setWheels(userWheels);
+      setSelectedWheelId(data.odyssey.selected_wheel_id || null);
       hydrate({
         plans: data.plans,
         milestones: Object.fromEntries(data.plans.map((p) => [p.id, p.milestones])),
@@ -53,6 +68,14 @@ export default function Plan1Page() {
         prototypeSteps: data.prototypeSteps,
         weeklyChecks: data.weeklyChecks,
       });
+
+      // Load goals if wheel is selected
+      const plan1 = data.plans.find((p) => p.plan_number === 1);
+      if (data.odyssey.selected_wheel_id && plan1) {
+        const goals = await getOdysseyGoals(odysseyId, plan1.id);
+        setOdysseyGoals(goals);
+      }
+
       setLoading(false);
     }
     load();
@@ -103,19 +126,25 @@ export default function Plan1Page() {
     router.push(`/plan-de-vida/${odysseyId}/plan-2`);
   };
 
-  const handleAddMilestone = (data: { title: string; description: string; category: MilestoneCategory | null; domain_id: string | null; tag: MilestoneTag; year: number }) => {
+  const handleAddMilestone = (data: { title: string; description: string; category: MilestoneCategory | null; domain_id: string | null; tag: MilestoneTag; year: number; replicateToAllYears?: boolean }) => {
     if (!planId) return;
-    addMilestone(planId, {
-      id: crypto.randomUUID(),
-      plan_id: planId,
-      year: data.year,
-      category: data.category,
-      domain_id: data.domain_id,
-      title: data.title,
-      description: data.description,
-      tag: data.tag,
-      order_position: planMilestones.length,
-      created_at: new Date().toISOString(),
+
+    const yearsToCreate = data.replicateToAllYears ? [1, 2, 3, 4, 5] : [data.year];
+    const currentMilestoneCount = planMilestones.length;
+
+    yearsToCreate.forEach((year, index) => {
+      addMilestone(planId, {
+        id: crypto.randomUUID(),
+        plan_id: planId,
+        year,
+        category: data.category,
+        domain_id: data.domain_id,
+        title: data.title,
+        description: data.description,
+        tag: data.tag,
+        order_position: currentMilestoneCount + index,
+        created_at: new Date().toISOString(),
+      });
     });
   };
 
@@ -137,6 +166,42 @@ export default function Plan1Page() {
 
   const handleMoveMilestone = (milestoneId: string, newYear: number) => {
     moveMilestone(milestoneId, newYear);
+  };
+
+  // Wheel goal handlers
+  const handleSelectWheel = async (wheelId: string) => {
+    if (!planId) return;
+    setImportingGoals(true);
+    try {
+      const importResult = await importWheelGoalsToOdyssey(odysseyId, wheelId);
+      console.log('[Plan1] Import result:', importResult);
+      setSelectedWheelId(wheelId);
+      const goals = await getOdysseyGoals(odysseyId, planId);
+      console.log('[Plan1] Goals loaded:', goals);
+      setOdysseyGoals(goals);
+    } catch (error) {
+      console.error('[Plan1] Error importing/loading goals:', error);
+    } finally {
+      setImportingGoals(false);
+    }
+  };
+
+  const handleAssignGoal = async (goalId: string, yearIndex: number) => {
+    if (!planId) return;
+    await assignGoalToYear(odysseyId, planId, goalId, yearIndex);
+    const goals = await getOdysseyGoals(odysseyId, planId);
+    setOdysseyGoals(goals);
+  };
+
+  const handleUnassignGoal = async (goalId: string) => {
+    if (!planId) return;
+    await unassignGoal(planId, goalId);
+    const goals = await getOdysseyGoals(odysseyId, planId);
+    setOdysseyGoals(goals);
+  };
+
+  const handleEditGoal = (goalId: string) => {
+    router.push(`/mi-plan/metas/${goalId}`);
   };
 
   if (loading) {
@@ -176,8 +241,35 @@ export default function Plan1Page() {
           placeholder="Resume tu Plan 1 en una frase..."
         />
 
+        {/* Wheel Goals Section */}
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-sm font-semibold mb-2">Metas de tu Rueda de la Vida</h2>
+            <p className="text-xs text-muted-foreground mb-3">
+              Selecciona una rueda para importar sus metas y asignarlas a cada ano de tu plan
+            </p>
+            <WheelSelector
+              wheels={wheels}
+              selectedWheelId={selectedWheelId}
+              onSelect={handleSelectWheel}
+              loading={importingGoals}
+            />
+          </div>
+
+          {selectedWheelId && (
+            <GoalTimelineBuilder
+              unassignedGoals={odysseyGoals.unassigned}
+              goalsByYear={odysseyGoals.byYear}
+              yearNames={plan?.year_names || {}}
+              onAssignGoal={handleAssignGoal}
+              onUnassignGoal={handleUnassignGoal}
+              onEditGoal={handleEditGoal}
+            />
+          )}
+        </div>
+
         <div>
-          <h2 className="text-sm font-semibold mb-3">Metas a 5 años</h2>
+          <h2 className="text-sm font-semibold mb-3">Metas a 5 anos</h2>
           <TimelineBuilder
             milestones={planMilestones}
             yearNames={plan?.year_names || {}}

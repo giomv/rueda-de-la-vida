@@ -6,6 +6,18 @@
 import { useLifePlanStore } from '@/lib/stores/lifeplan-store';
 import type { ActivityWithCompletions, ViewMode } from '@/lib/types/lifeplan';
 
+// Helper function to format date in Spanish (same as in hoy/page.tsx)
+function formatDateSpanish(date: Date): string {
+  const months = [
+    'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+  ];
+  const day = date.getDate();
+  const month = months[date.getMonth()];
+  const year = date.getFullYear();
+  return `${day} de ${month}, ${year}`;
+}
+
 const createMockActivity = (
   id: string,
   frequency: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'ONCE',
@@ -246,6 +258,97 @@ describe('Views Navigation Flow', () => {
       // Month view
       useLifePlanStore.getState().setViewMode('month');
       expect(useLifePlanStore.getState().getActivitiesForDate('2024-01-15')).toHaveLength(1);
+    });
+  });
+
+  describe('Hoy Tab Date Display', () => {
+    it('should format date in Spanish correctly', () => {
+      // Test various dates
+      expect(formatDateSpanish(new Date(2026, 1, 2))).toBe('2 de febrero, 2026');
+      expect(formatDateSpanish(new Date(2024, 0, 15))).toBe('15 de enero, 2024');
+      expect(formatDateSpanish(new Date(2024, 11, 25))).toBe('25 de diciembre, 2024');
+    });
+
+    it('should navigate to previous day correctly', () => {
+      const initialDate = new Date(2024, 5, 15); // June 15, 2024
+      useLifePlanStore.getState().setViewDate(initialDate);
+
+      // Simulate goToPreviousDay
+      const prev = new Date(useLifePlanStore.getState().viewDate);
+      prev.setDate(prev.getDate() - 1);
+      useLifePlanStore.getState().setViewDate(prev);
+
+      const newDate = useLifePlanStore.getState().viewDate;
+      expect(newDate.getDate()).toBe(14);
+      expect(newDate.getMonth()).toBe(5); // June
+    });
+
+    it('should navigate to next day correctly', () => {
+      const initialDate = new Date(2024, 5, 15); // June 15, 2024
+      useLifePlanStore.getState().setViewDate(initialDate);
+
+      // Simulate goToNextDay
+      const next = new Date(useLifePlanStore.getState().viewDate);
+      next.setDate(next.getDate() + 1);
+      useLifePlanStore.getState().setViewDate(next);
+
+      const newDate = useLifePlanStore.getState().viewDate;
+      expect(newDate.getDate()).toBe(16);
+      expect(newDate.getMonth()).toBe(5); // June
+    });
+
+    it('should preserve filters when navigating days', () => {
+      // Set up filter
+      useLifePlanStore.getState().setFilter('domain');
+      useLifePlanStore.getState().setSelectedDomainId('domain-1');
+
+      // Navigate to a different day
+      const newDate = new Date(2024, 5, 20);
+      useLifePlanStore.getState().setViewDate(newDate);
+
+      // Verify filters are preserved
+      expect(useLifePlanStore.getState().filter).toBe('domain');
+      expect(useLifePlanStore.getState().selectedDomainId).toBe('domain-1');
+    });
+
+    it('should update activities list when navigating days', () => {
+      const dailyActivity = createMockActivity('daily', 'DAILY');
+      useLifePlanStore.getState().setActivities([dailyActivity]);
+      useLifePlanStore.getState().setViewMode('day');
+
+      // Check activities for two different dates
+      const date1Activities = useLifePlanStore.getState().getActivitiesForDate('2024-06-15');
+      const date2Activities = useLifePlanStore.getState().getActivitiesForDate('2024-06-16');
+
+      // Daily activities should appear on both days
+      expect(date1Activities).toHaveLength(1);
+      expect(date2Activities).toHaveLength(1);
+    });
+  });
+
+  describe('View-Specific Date Navigation', () => {
+    it('should only show date navigation in day view (Hoy tab)', () => {
+      // This test documents the expected behavior:
+      // - Day view (Hoy): shows date navigation with arrows
+      // - Week view (Semana): no date navigation
+      // - Month view (Mes): no date navigation
+      // - Once view (1 vez): no date navigation
+
+      // The viewDate state is shared, but navigation UI is only shown in day view
+      useLifePlanStore.getState().setViewMode('day');
+      expect(useLifePlanStore.getState().viewMode).toBe('day');
+
+      // Changing view mode shouldn't change the viewDate
+      const currentDate = useLifePlanStore.getState().viewDate;
+
+      useLifePlanStore.getState().setViewMode('week');
+      expect(useLifePlanStore.getState().viewDate).toBe(currentDate);
+
+      useLifePlanStore.getState().setViewMode('month');
+      expect(useLifePlanStore.getState().viewDate).toBe(currentDate);
+
+      useLifePlanStore.getState().setViewMode('once');
+      expect(useLifePlanStore.getState().viewDate).toBe(currentDate);
     });
   });
 });

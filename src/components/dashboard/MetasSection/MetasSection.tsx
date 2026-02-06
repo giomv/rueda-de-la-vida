@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { MetaCard } from './MetaCard';
 import {
   Select,
@@ -11,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Target, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
-import type { MetasSummaryResponse } from '@/lib/types/dashboard';
+import type { MetasSummaryResponse, MetaSummaryItem } from '@/lib/types/dashboard';
 
 interface MetasSectionProps {
   metasSummary: MetasSummaryResponse | null;
@@ -28,6 +29,15 @@ export function MetasSection({
   globalGoalFilter,
   loading = false,
 }: MetasSectionProps) {
+  const router = useRouter();
+
+  const handleMetaClick = (meta: MetaSummaryItem) => {
+    // Navigate to goal detail if goal exists, otherwise to Plan de Vida
+    if (meta.goalId) {
+      router.push(`/mi-plan/metas/${meta.goalId}`);
+    }
+  };
+
   // Loading state
   if (loading || !metasSummary) {
     return (
@@ -128,6 +138,7 @@ export function MetasSection({
             <MetaCard
               key={meta.id}
               data={meta}
+              onClick={() => handleMetaClick(meta)}
             />
           ))}
         </div>

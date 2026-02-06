@@ -26,17 +26,18 @@ import { FrequencySelector } from './FrequencySelector';
 import { createActivity, updateActivity } from '@/lib/actions/lifeplan-actions';
 import { createGoal } from '@/lib/actions/goal-actions';
 import { cn } from '@/lib/utils';
-import type { LifePlanActivity, FrequencyType, CreateActivityInput, Goal } from '@/lib/types/lifeplan';
+import type { LifePlanActivity, FrequencyType, CreateActivityInput } from '@/lib/types/lifeplan';
 import type { LifeDomain } from '@/lib/types';
+import type { GoalWithYear } from '@/lib/types/dashboard';
 import { SMARTGoalTooltip } from '@/components/shared/SMARTGoalTooltip';
 
 interface ActivityFormProps {
   activity?: LifePlanActivity;
   domains: LifeDomain[];
-  goals: Goal[];
+  goals: GoalWithYear[];
   onSave?: (activity: LifePlanActivity) => void;
   onCancel?: () => void;
-  onGoalCreated?: (goal: Goal) => void;
+  onGoalCreated?: (goal: GoalWithYear) => void;
   className?: string;
 }
 
@@ -100,8 +101,14 @@ export function ActivityForm({
         metric: newGoalMetric.trim() || undefined,
       });
 
+      // Convert to GoalWithYear (new goals have no year assigned yet)
+      const goalWithYear: GoalWithYear = {
+        ...newGoal,
+        yearIndex: null,
+      };
+
       setGoalId(newGoal.id);
-      onGoalCreated?.(newGoal);
+      onGoalCreated?.(goalWithYear);
       setShowNewGoalDialog(false);
       setNewGoalTitle('');
       setNewGoalMetric('');

@@ -12,6 +12,8 @@ import {
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MONTH_NAMES } from '@/lib/types/finances';
+import { SearchableGoalFilter } from './SearchableGoalFilter';
+import type { GoalWithYear } from '@/lib/types/dashboard';
 
 interface DashboardFiltersProps {
   className?: string;
@@ -57,16 +59,14 @@ export function DashboardFilters({ className }: DashboardFiltersProps) {
     }
   };
 
-  const handleGoalChange = (value: string) => {
-    if (value === 'all') {
-      store.setGoalId(null);
-    } else {
-      store.setGoalId(value);
-      // Auto-select domain if goal has one
-      const goal = goals.find(g => g.id === value);
-      if (goal?.domain_id && goal.domain_id !== domainId) {
-        store.setDomainId(goal.domain_id);
-      }
+  const handleGoalChange = (goalId: string | null) => {
+    store.setGoalId(goalId);
+  };
+
+  const handleGoalSelected = (goal: GoalWithYear) => {
+    // Auto-select domain if goal has one
+    if (goal.domain_id && goal.domain_id !== domainId) {
+      store.setDomainId(goal.domain_id);
     }
   };
 
@@ -115,24 +115,14 @@ export function DashboardFilters({ className }: DashboardFiltersProps) {
         </SelectContent>
       </Select>
 
-      {/* Goal filter */}
-      <Select
-        value={goalId || 'all'}
-        onValueChange={handleGoalChange}
+      {/* Goal filter - searchable */}
+      <SearchableGoalFilter
+        goals={filteredGoals}
+        value={goalId}
+        onChange={handleGoalChange}
+        onGoalSelected={handleGoalSelected}
         disabled={filteredGoals.length === 0}
-      >
-        <SelectTrigger className="w-[180px]">
-          <SelectValue placeholder="Todas las metas" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todas las metas</SelectItem>
-          {filteredGoals.map((goal) => (
-            <SelectItem key={goal.id} value={goal.id}>
-              {goal.title}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      />
 
       {/* Clear filters */}
       {hasFilters && (

@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { GroupedActivityList, ViewTabs, ProgressBar } from '@/components/lifeplan';
 import { useLifePlan } from '@/hooks/use-lifeplan';
@@ -17,7 +17,7 @@ function formatDate(date: Date): string {
 
 export default function MesPage() {
   const router = useRouter();
-  const { viewDate, setViewDate, setViewMode, getGroupedActivitiesForView, getCompletionRateForView } = useLifePlanStore();
+  const { viewDate, setViewMode, getGroupedActivitiesForView, getCompletionRateForView } = useLifePlanStore();
   const { loading } = useLifePlan();
 
   // Set view mode on mount
@@ -28,24 +28,6 @@ export default function MesPage() {
   const today = formatDate(viewDate);
   const groupedActivities = getGroupedActivitiesForView('month', viewDate);
   const { completed, total } = getCompletionRateForView('month', viewDate);
-
-  const goToPreviousDay = () => {
-    const prev = new Date(viewDate);
-    prev.setDate(prev.getDate() - 1);
-    setViewDate(prev);
-  };
-
-  const goToNextDay = () => {
-    const next = new Date(viewDate);
-    next.setDate(next.getDate() + 1);
-    setViewDate(next);
-  };
-
-  const goToToday = () => {
-    setViewDate(new Date());
-  };
-
-  const isToday = formatDate(viewDate) === formatDate(new Date());
 
   if (loading) {
     return (
@@ -71,27 +53,6 @@ export default function MesPage() {
 
       {/* View tabs */}
       <ViewTabs className="mb-4" />
-
-      {/* Date navigation */}
-      <div className="flex items-center justify-between mb-4">
-        <Button variant="ghost" size="icon" onClick={goToPreviousDay}>
-          <ChevronLeft className="w-5 h-5" />
-        </Button>
-
-        <div className="text-center">
-          <button
-            onClick={goToToday}
-            className="text-sm text-muted-foreground hover:text-foreground"
-            disabled={isToday}
-          >
-            {isToday ? 'Hoy' : 'Ir a hoy'}
-          </button>
-        </div>
-
-        <Button variant="ghost" size="icon" onClick={goToNextDay}>
-          <ChevronRight className="w-5 h-5" />
-        </Button>
-      </div>
 
       {/* Progress */}
       <div className="mb-6">

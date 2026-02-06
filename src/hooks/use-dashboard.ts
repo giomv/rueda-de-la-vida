@@ -10,7 +10,7 @@ import {
   getRecentActivity,
   getCelebration,
   getDomains,
-  getGoals,
+  getGoalsWithYears,
   hasActivePlan as checkHasActivePlan,
   getActionGridData,
   getDomainsSummaryData,
@@ -52,7 +52,7 @@ export function useDashboard() {
         activityResponse,
         celebration,
         domains,
-        goals,
+        goalsResponse,
         actionGridData,
         domainsSummary,
         metasSummary,
@@ -64,7 +64,7 @@ export function useDashboard() {
         getRecentActivity(filters, 10),
         getCelebration(),
         getDomains(),
-        getGoals(filters.domainId),
+        getGoalsWithYears(filters.domainId),
         getActionGridData(filters),
         getDomainsSummaryData(filters),
         getMetasSummary(filters, metasYearIndex),
@@ -83,7 +83,7 @@ export function useDashboard() {
         activityHasMore: activityResponse.hasMore,
         celebration,
         domains,
-        goals,
+        goals: goalsResponse.goals,
         actionGridData,
         domainsSummary,
         metasSummary,
@@ -104,8 +104,8 @@ export function useDashboard() {
   // Refresh goals when domain filter changes
   useEffect(() => {
     async function updateGoals() {
-      const goals = await getGoals(store.domainId);
-      store.setGoals(goals);
+      const goalsResponse = await getGoalsWithYears(store.domainId);
+      store.setGoals(goalsResponse.goals);
     }
     updateGoals();
   }, [store.domainId]);

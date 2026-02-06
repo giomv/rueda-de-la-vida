@@ -15,6 +15,17 @@ function formatDate(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+function formatDateSpanish(date: Date): string {
+  const months = [
+    'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+  ];
+  const day = date.getDate();
+  const month = months[date.getMonth()];
+  const year = date.getFullYear();
+  return `${day} de ${month}, ${year}`;
+}
+
 export default function HoyPage() {
   const router = useRouter();
   const { viewDate, setViewDate, setViewMode, getGroupedActivitiesForDate, getCompletionRateForView } = useLifePlanStore();
@@ -114,23 +125,35 @@ export default function HoyPage() {
       {/* View tabs */}
       <ViewTabs className="mb-4" />
 
-      {/* Date navigation */}
+      {/* Date navigation - only in Hoy tab */}
       <div className="flex items-center justify-between mb-4">
-        <Button variant="ghost" size="icon" onClick={goToPreviousDay}>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={goToPreviousDay}
+          aria-label="Día anterior"
+        >
           <ChevronLeft className="w-5 h-5" />
         </Button>
 
         <div className="text-center">
-          <button
-            onClick={goToToday}
-            className="text-sm text-muted-foreground hover:text-foreground"
-            disabled={isToday}
-          >
-            {isToday ? 'Hoy' : 'Ir a hoy'}
-          </button>
+          <span className="font-medium">{formatDateSpanish(viewDate)}</span>
+          {!isToday && (
+            <button
+              onClick={goToToday}
+              className="block text-xs text-primary hover:underline mt-0.5 mx-auto"
+            >
+              Ir a hoy
+            </button>
+          )}
         </div>
 
-        <Button variant="ghost" size="icon" onClick={goToNextDay}>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={goToNextDay}
+          aria-label="Día siguiente"
+        >
           <ChevronRight className="w-5 h-5" />
         </Button>
       </div>

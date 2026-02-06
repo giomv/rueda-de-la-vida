@@ -1,5 +1,7 @@
 // Plan de Vida (Odyssey Plan) types
 
+import type { Goal, LifeDomain } from './index';
+
 export interface Odyssey {
   id: string;
   user_id: string;
@@ -7,6 +9,7 @@ export interface Odyssey {
   mode: 'individual' | 'pareja';
   active_plan_number: number | null;
   current_step: string;
+  selected_wheel_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -101,6 +104,24 @@ export interface SharedOdyssey {
   odyssey_id: string;
   shared_by: string;
   created_at: string;
+}
+
+// Goal assignment to a year within a plan
+export interface OdysseyGoalAssignment {
+  id: string;
+  odyssey_id: string;
+  plan_id: string;
+  goal_id: string;
+  year_index: number;  // 1-5
+  order_position: number;
+  created_at: string;
+}
+
+// Goal with assignment info (for UI display)
+export interface GoalWithAssignment {
+  goal: Goal;
+  assignment: OdysseyGoalAssignment | null;
+  domain?: LifeDomain | null;
 }
 
 // Composite types

@@ -14,7 +14,7 @@ interface YearColumnProps {
   year: number;
   yearName?: string;
   milestones: OdysseyMilestone[];
-  onAdd: (data: { title: string; description: string; category: MilestoneCategory | null; domain_id: string | null; tag: MilestoneTag; year: number }) => void;
+  onAdd: (data: { title: string; description: string; category: MilestoneCategory | null; domain_id: string | null; tag: MilestoneTag; year: number; replicateToAllYears?: boolean }) => void;
   onEdit: (milestoneId: string, data: { title: string; description: string; category: MilestoneCategory | null; domain_id: string | null; tag: MilestoneTag; year: number }) => void;
   onDelete: (milestoneId: string) => void;
   onYearNameChange?: (year: number, name: string) => void;

@@ -25,6 +25,8 @@ import type {
   DomainsSummaryResponse,
   MetasSummaryResponse,
   MetaSummaryItem,
+  GoalWithYear,
+  GoalsWithYearsResponse,
 } from '@/lib/types/dashboard';
 import type { LifeDomain, Goal, WeeklyCheckin, FrequencyType } from '@/lib/types';
 
@@ -970,6 +972,112 @@ export async function getGoals(domainId?: string | null): Promise<Goal[]> {
 }
 
 /**
+ * Get goals with year information from the active Plan de Vida
+ * Goals are ordered by year (Año 1 → Año N), then by title alphabetically
+ */
+export async function getGoalsWithYears(domainId?: string | null): Promise<GoalsWithYearsResponse> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('No autenticado');
+
+  // Get all non-archived goals
+  let query = supabase
+    .from('goals')
+    .select('*')
+    .eq('user_id', user.id)
+    .eq('is_archived', false);
+
+  if (domainId) query = query.eq('domain_id', domainId);
+
+  const { data: goals } = await query;
+
+  if (!goals?.length) {
+    return { goals: [], availableYears: [] };
+  }
+
+  // Get user's active odyssey
+  const { data: odyssey } = await supabase
+    .from('odysseys')
+    .select('id, active_plan_number')
+    .eq('user_id', user.id)
+    .not('active_plan_number', 'is', null)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .single();
+
+  if (!odyssey) {
+    // No active Plan de Vida - return goals without year info, ordered by title
+    const goalsWithYear: GoalWithYear[] = goals
+      .map(g => ({ ...g, yearIndex: null }))
+      .sort((a, b) => a.title.localeCompare(b.title, 'es'));
+    return { goals: goalsWithYear, availableYears: [] };
+  }
+
+  // Get the active plan
+  const { data: activePlan } = await supabase
+    .from('odyssey_plans')
+    .select('id')
+    .eq('odyssey_id', odyssey.id)
+    .eq('plan_number', odyssey.active_plan_number)
+    .single();
+
+  if (!activePlan) {
+    const goalsWithYear: GoalWithYear[] = goals
+      .map(g => ({ ...g, yearIndex: null }))
+      .sort((a, b) => a.title.localeCompare(b.title, 'es'));
+    return { goals: goalsWithYear, availableYears: [] };
+  }
+
+  // Get all milestones from the active plan
+  const { data: milestones } = await supabase
+    .from('odyssey_milestones')
+    .select('id, title, year, domain_id')
+    .eq('plan_id', activePlan.id);
+
+  // Create a map of normalized title -> year
+  const titleToYear = new Map<string, number>();
+  const availableYearsSet = new Set<number>();
+
+  (milestones || []).forEach(m => {
+    const normalizedTitle = m.title.toLowerCase().trim();
+    titleToYear.set(normalizedTitle, m.year);
+    availableYearsSet.add(m.year);
+  });
+
+  // Match goals to milestones by title and assign year
+  const goalsWithYear: GoalWithYear[] = goals.map(goal => {
+    const normalizedTitle = goal.title.toLowerCase().trim();
+    const yearIndex = titleToYear.get(normalizedTitle) ?? null;
+    return { ...goal, yearIndex };
+  });
+
+  // Sort goals: first by yearIndex (nulls last), then by title alphabetically
+  goalsWithYear.sort((a, b) => {
+    // Both have year - sort by year first
+    if (a.yearIndex !== null && b.yearIndex !== null) {
+      if (a.yearIndex !== b.yearIndex) {
+        return a.yearIndex - b.yearIndex;
+      }
+      return a.title.localeCompare(b.title, 'es');
+    }
+    // Only a has year - a comes first
+    if (a.yearIndex !== null && b.yearIndex === null) {
+      return -1;
+    }
+    // Only b has year - b comes first
+    if (a.yearIndex === null && b.yearIndex !== null) {
+      return 1;
+    }
+    // Neither has year - sort by title
+    return a.title.localeCompare(b.title, 'es');
+  });
+
+  const availableYears = Array.from(availableYearsSet).sort((a, b) => a - b);
+
+  return { goals: goalsWithYear, availableYears };
+}
+
+/**
  * Check if user has an active life plan
  */
 export async function hasActivePlan(): Promise<boolean> {
@@ -1165,33 +1273,19 @@ export async function getActionGridData(filters: DashboardFilters): Promise<Acti
     }),
   };
 
-  // Build monthly grid data
+  // Build monthly grid data - uses period_key = YYYY-MM for monthly completion
+  const monthlyPeriodKey = `${year}-${String(month).padStart(2, '0')}`;
   const monthly: MonthlyGridData = {
     actions: monthlyActivities.map(activity => {
-      const completion = completionsList.find(c => c.activity_id === activity.id);
-      let completedWeekIndex: number | null = null;
-      const statusByWeekIndex: Record<number, boolean> = {};
-
-      if (completion && completion.completed_at) {
-        // Find which week the completion occurred in
-        const completedDate = new Date(completion.completed_at);
-        for (const bucket of weekBuckets) {
-          const bucketStart = new Date(bucket.start);
-          const bucketEnd = new Date(bucket.end);
-          bucketEnd.setHours(23, 59, 59, 999);
-          if (completedDate >= bucketStart && completedDate <= bucketEnd) {
-            completedWeekIndex = bucket.index;
-            statusByWeekIndex[bucket.index] = true;
-            break;
-          }
-        }
-      }
+      // Check if there's a completion for this activity with the monthly period_key
+      const completion = completionsList.find(
+        c => c.activity_id === activity.id && c.period_key === monthlyPeriodKey
+      );
 
       return {
         id: activity.id,
         name: activity.title,
-        completedWeekIndex,
-        statusByWeekIndex,
+        completed: !!completion,
       };
     }),
   };

@@ -2,14 +2,13 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatusCircle } from './StatusCircle';
-import type { MonthlyGridData, WeekBucket } from '@/lib/types/dashboard';
+import type { MonthlyGridData } from '@/lib/types/dashboard';
 
 interface MonthlyGridProps {
   data: MonthlyGridData;
-  weekBuckets: WeekBucket[];
 }
 
-export function MonthlyGrid({ data, weekBuckets }: MonthlyGridProps) {
+export function MonthlyGrid({ data }: MonthlyGridProps) {
   if (data.actions.length === 0) {
     return (
       <Card>
@@ -31,38 +30,19 @@ export function MonthlyGrid({ data, weekBuckets }: MonthlyGridProps) {
         <CardTitle className="text-base">Acciones mensuales</CardTitle>
       </CardHeader>
       <CardContent>
-        <table className="w-full text-sm">
-          <thead>
-            <tr>
-              <th className="text-left font-medium py-1 pr-2 min-w-[100px]">
-                Accion
-              </th>
-              {weekBuckets.map((bucket) => (
-                <th
-                  key={bucket.index}
-                  className="text-center font-normal text-muted-foreground px-1"
-                  title={`${bucket.start} - ${bucket.end}`}
-                >
-                  S{bucket.index}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {data.actions.map((action) => (
-              <tr key={action.id}>
-                <td className="py-1 pr-2 truncate max-w-[100px]" title={action.name}>
-                  {action.name}
-                </td>
-                {weekBuckets.map((bucket) => (
-                  <td key={bucket.index} className="text-center px-1 py-1">
-                    <StatusCircle completed={!!action.statusByWeekIndex[bucket.index]} />
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="space-y-2">
+          {data.actions.map((action) => (
+            <div
+              key={action.id}
+              className="flex items-center justify-between gap-2 py-1"
+            >
+              <span className="text-sm truncate" title={action.name}>
+                {action.name}
+              </span>
+              <StatusCircle completed={action.completed} />
+            </div>
+          ))}
+        </div>
       </CardContent>
     </Card>
   );

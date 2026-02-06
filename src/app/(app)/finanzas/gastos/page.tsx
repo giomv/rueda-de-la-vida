@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import { FinancesTabs, ExpenseForm, ExpenseList } from '@/components/finances';
+import { FinancesTabs, ExpenseForm, ExpenseList, SavingsForm, SavingsList } from '@/components/finances';
+import { Button } from '@/components/ui/button';
 import { getExpensesForDateRange } from '@/lib/actions/finances-actions';
+import { getSavingsForDateRange } from '@/lib/actions/savings-actions';
 import type { ExpenseWithRelations } from '@/lib/types/finances';
+import type { SavingsMovementWithRelations } from '@/lib/types/dashboard';
 
 function getDateRangeForToday(): { startDate: string; endDate: string } {
   const today = new Date();
@@ -28,12 +30,14 @@ function getDateRangeForToday(): { startDate: string; endDate: string } {
 }
 
 export default function GastosPage() {
-  const router = useRouter();
+  const [activeTab, setActiveTab] = useState<'expense' | 'savings'>('expense');
   const [expenses, setExpenses] = useState<ExpenseWithRelations[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [savings, setSavings] = useState<SavingsMovementWithRelations[]>([]);
+  const [loadingExpenses, setLoadingExpenses] = useState(true);
+  const [loadingSavings, setLoadingSavings] = useState(true);
 
   const loadExpenses = useCallback(async () => {
-    setLoading(true);
+    setLoadingExpenses(true);
     const { startDate, endDate } = getDateRangeForToday();
     try {
       const data = await getExpensesForDateRange(startDate, endDate);
@@ -41,16 +45,34 @@ export default function GastosPage() {
     } catch (error) {
       console.error('Error loading expenses:', error);
     } finally {
-      setLoading(false);
+      setLoadingExpenses(false);
+    }
+  }, []);
+
+  const loadSavings = useCallback(async () => {
+    setLoadingSavings(true);
+    const { startDate, endDate } = getDateRangeForToday();
+    try {
+      const data = await getSavingsForDateRange(startDate, endDate);
+      setSavings(data);
+    } catch (error) {
+      console.error('Error loading savings:', error);
+    } finally {
+      setLoadingSavings(false);
     }
   }, []);
 
   useEffect(() => {
     loadExpenses();
-  }, [loadExpenses]);
+    loadSavings();
+  }, [loadExpenses, loadSavings]);
 
   const handleExpenseAdded = () => {
     loadExpenses();
+  };
+
+  const handleSavingsAdded = () => {
+    loadSavings();
   };
 
   return (
@@ -63,26 +85,67 @@ export default function GastosPage() {
       {/* View tabs */}
       <FinancesTabs className="mb-6" />
 
-      {/* Add expense form */}
+      {/* Add section with toggle */}
       <div className="mb-8">
-        <h2 className="text-lg font-semibold mb-4">Agregar gasto</h2>
-        <ExpenseForm onSuccess={handleExpenseAdded} />
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">Agregar</h2>
+          {/* Toggle buttons */}
+          <div className="flex gap-1 p-1 bg-muted rounded-lg">
+            <Button
+              variant={activeTab === 'expense' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setActiveTab('expense')}
+            >
+              Gasto
+            </Button>
+            <Button
+              variant={activeTab === 'savings' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setActiveTab('savings')}
+            >
+              Ahorro
+            </Button>
+          </div>
+        </div>
+
+        {activeTab === 'expense' ? (
+          <ExpenseForm onSuccess={handleExpenseAdded} />
+        ) : (
+          <SavingsForm onSuccess={handleSavingsAdded} />
+        )}
       </div>
 
-      {/* Recent expenses */}
+      {/* Recent items - show based on active tab */}
       <div>
-        <h2 className="text-lg font-semibold mb-4">Gastos recientes</h2>
-        {loading ? (
-          <div className="animate-pulse space-y-3">
-            <div className="h-20 bg-muted rounded-lg" />
-            <div className="h-20 bg-muted rounded-lg" />
-            <div className="h-20 bg-muted rounded-lg" />
-          </div>
+        <h2 className="text-lg font-semibold mb-4">
+          {activeTab === 'expense' ? 'Gastos recientes' : 'Ahorros recientes'}
+        </h2>
+        {activeTab === 'expense' ? (
+          loadingExpenses ? (
+            <div className="animate-pulse space-y-3">
+              <div className="h-20 bg-muted rounded-lg" />
+              <div className="h-20 bg-muted rounded-lg" />
+              <div className="h-20 bg-muted rounded-lg" />
+            </div>
+          ) : (
+            <ExpenseList
+              expenses={expenses.slice(0, 5)}
+              onExpenseDelete={loadExpenses}
+            />
+          )
         ) : (
-          <ExpenseList
-            expenses={expenses.slice(0, 5)}
-            onExpenseDelete={loadExpenses}
-          />
+          loadingSavings ? (
+            <div className="animate-pulse space-y-3">
+              <div className="h-20 bg-muted rounded-lg" />
+              <div className="h-20 bg-muted rounded-lg" />
+              <div className="h-20 bg-muted rounded-lg" />
+            </div>
+          ) : (
+            <SavingsList
+              savings={savings.slice(0, 5)}
+              onSavingsDelete={loadSavings}
+            />
+          )
         )}
       </div>
     </div>

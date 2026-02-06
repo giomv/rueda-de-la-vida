@@ -277,6 +277,131 @@ describe('MetaSummaryItem Type', () => {
   });
 });
 
+describe('MetaCard KPI Calculations (Domain-style format)', () => {
+  // Helper to calculate completion rate (matches MetaCard implementation)
+  const calculateCompletionRate = (done: number, pending: number): number => {
+    const total = done + pending;
+    return total > 0 ? Math.round((done / total) * 100) : 0;
+  };
+
+  // Helper to determine status from completion rate (matches MetaCard implementation)
+  const getStatusFromCompletionRate = (rate: number): 'on-track' | 'at-risk' | 'behind' => {
+    if (rate >= 80) return 'on-track';
+    if (rate >= 50) return 'at-risk';
+    return 'behind';
+  };
+
+  describe('Completion Rate (% avance)', () => {
+    it('should calculate 0% when no actions exist', () => {
+      const rate = calculateCompletionRate(0, 0);
+      expect(rate).toBe(0);
+    });
+
+    it('should calculate 100% when all actions are done', () => {
+      const rate = calculateCompletionRate(10, 0);
+      expect(rate).toBe(100);
+    });
+
+    it('should calculate 0% when no actions are done', () => {
+      const rate = calculateCompletionRate(0, 10);
+      expect(rate).toBe(0);
+    });
+
+    it('should calculate correct percentage for partial completion', () => {
+      // 5 done, 3 pending = 5/8 = 62.5% -> rounds to 63%
+      const rate = calculateCompletionRate(5, 3);
+      expect(rate).toBe(63);
+    });
+
+    it('should round to nearest integer', () => {
+      // 1 done, 2 pending = 1/3 = 33.33% -> rounds to 33%
+      const rate = calculateCompletionRate(1, 2);
+      expect(rate).toBe(33);
+    });
+  });
+
+  describe('Status Badge (matches Domain thresholds)', () => {
+    it('should return on-track for rate >= 80%', () => {
+      expect(getStatusFromCompletionRate(80)).toBe('on-track');
+      expect(getStatusFromCompletionRate(100)).toBe('on-track');
+      expect(getStatusFromCompletionRate(85)).toBe('on-track');
+    });
+
+    it('should return at-risk for rate >= 50% and < 80%', () => {
+      expect(getStatusFromCompletionRate(50)).toBe('at-risk');
+      expect(getStatusFromCompletionRate(65)).toBe('at-risk');
+      expect(getStatusFromCompletionRate(79)).toBe('at-risk');
+    });
+
+    it('should return behind for rate < 50%', () => {
+      expect(getStatusFromCompletionRate(0)).toBe('behind');
+      expect(getStatusFromCompletionRate(25)).toBe('behind');
+      expect(getStatusFromCompletionRate(49)).toBe('behind');
+    });
+  });
+
+  describe('Actions Display (X/Y format like Domains)', () => {
+    it('should display actions in X/Y format', () => {
+      const meta = createMockMetaSummaryItem('meta-1', 1, {
+        actionsDoneCount: 5,
+        actionsPendingCount: 3,
+      });
+      const total = meta.actionsDoneCount + meta.actionsPendingCount;
+      const display = `${meta.actionsDoneCount}/${total} acciones`;
+      expect(display).toBe('5/8 acciones');
+    });
+
+    it('should handle zero actions', () => {
+      const meta = createMockMetaSummaryItem('meta-1', 1, {
+        actionsDoneCount: 0,
+        actionsPendingCount: 0,
+      });
+      const total = meta.actionsDoneCount + meta.actionsPendingCount;
+      const display = `${meta.actionsDoneCount}/${total} acciones`;
+      expect(display).toBe('0/0 acciones');
+    });
+  });
+
+  describe('Finance Display (S/ currency)', () => {
+    it('should have spentTotal and savedTotal for finance KPIs', () => {
+      const meta = createMockMetaSummaryItem('meta-1', 1, {
+        spentTotal: 150.50,
+        savedTotal: 200.00,
+      });
+      expect(meta.spentTotal).toBe(150.50);
+      expect(meta.savedTotal).toBe(200.00);
+    });
+
+    it('should handle zero finance values', () => {
+      const meta = createMockMetaSummaryItem('meta-1', 1, {
+        spentTotal: 0,
+        savedTotal: 0,
+      });
+      expect(meta.spentTotal).toBe(0);
+      expect(meta.savedTotal).toBe(0);
+    });
+  });
+
+  describe('Card Structure Parity with DomainSummaryCard', () => {
+    it('should support status calculation like DomainSummaryCard', () => {
+      // Meta with 80% completion should be on-track (like domains)
+      const meta = createMockMetaSummaryItem('meta-1', 1, {
+        actionsDoneCount: 8,
+        actionsPendingCount: 2,
+      });
+      const rate = calculateCompletionRate(meta.actionsDoneCount, meta.actionsPendingCount);
+      const status = getStatusFromCompletionRate(rate);
+      expect(rate).toBe(80);
+      expect(status).toBe('on-track');
+    });
+
+    it('should have yearIndex for optional Año label', () => {
+      const meta = createMockMetaSummaryItem('meta-1', 3);
+      expect(meta.yearIndex).toBe(3);
+    });
+  });
+});
+
 describe('MetasSummaryResponse Type', () => {
   it('should have all required fields', () => {
     const response: MetasSummaryResponse = {

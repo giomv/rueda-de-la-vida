@@ -484,7 +484,15 @@ export async function getBudgetSummary(year: number, month: number): Promise<Bud
     .gte('date', startDate)
     .lte('date', endDate);
 
-  // Calculate actuals per account
+  // Get savings movements for this month
+  const { data: savingsMovements } = await supabase
+    .from('savings_movements')
+    .select('amount, budget_account_id, movement_type')
+    .eq('user_id', user.id)
+    .gte('date', startDate)
+    .lte('date', endDate);
+
+  // Calculate actuals per account (expenses)
   const actualsByAccount = new Map<string, { sum: number; count: number }>();
   (expenses || []).forEach((expense) => {
     const accountId = expense.budget_account_id;
@@ -492,6 +500,21 @@ export async function getBudgetSummary(year: number, month: number): Promise<Bud
       const current = actualsByAccount.get(accountId) || { sum: 0, count: 0 };
       actualsByAccount.set(accountId, {
         sum: current.sum + Number(expense.amount),
+        count: current.count + 1,
+      });
+    }
+  });
+
+  // Add savings movements to actuals (deposits add, withdrawals subtract)
+  (savingsMovements || []).forEach((movement) => {
+    const accountId = movement.budget_account_id;
+    if (accountId) {
+      const current = actualsByAccount.get(accountId) || { sum: 0, count: 0 };
+      const amount = movement.movement_type === 'deposit'
+        ? Number(movement.amount)
+        : -Number(movement.amount);
+      actualsByAccount.set(accountId, {
+        sum: current.sum + amount,
         count: current.count + 1,
       });
     }
@@ -564,6 +587,14 @@ export async function getAnnualSummary(year: number): Promise<AnnualSummary> {
     .gte('date', startDate)
     .lte('date', endDate);
 
+  // Get all savings movements for the year
+  const { data: savingsMovements } = await supabase
+    .from('savings_movements')
+    .select('amount, date, budget_account_id, movement_type')
+    .eq('user_id', user.id)
+    .gte('date', startDate)
+    .lte('date', endDate);
+
   // Build month summaries
   const months: AnnualSummary['months'] = [];
   const accountTotals = new Map<string, { name: string; actual: number; category: BudgetCategory }>();
@@ -575,6 +606,10 @@ export async function getAnnualSummary(year: number): Promise<AnnualSummary> {
       const expMonth = parseInt(e.date.split('-')[1], 10);
       return expMonth === month;
     });
+    const monthSavings = (savingsMovements || []).filter((s) => {
+      const savMonth = parseInt(s.date.split('-')[1], 10);
+      return savMonth === month;
+    });
 
     const monthActualTotal = monthExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
     monthlyTrend.push({ month, actual: monthActualTotal });
@@ -582,12 +617,23 @@ export async function getAnnualSummary(year: number): Promise<AnnualSummary> {
     if (budget) {
       const accounts = (budget as MonthlyBudgetWithAccounts).accounts || [];
 
-      // Calculate actuals per account for this month
+      // Calculate actuals per account for this month (expenses)
       const actualsByAccount = new Map<string, number>();
       monthExpenses.forEach((expense) => {
         if (expense.budget_account_id) {
           const current = actualsByAccount.get(expense.budget_account_id) || 0;
           actualsByAccount.set(expense.budget_account_id, current + Number(expense.amount));
+        }
+      });
+
+      // Add savings movements to actuals
+      monthSavings.forEach((movement) => {
+        if (movement.budget_account_id) {
+          const current = actualsByAccount.get(movement.budget_account_id) || 0;
+          const amount = movement.movement_type === 'deposit'
+            ? Number(movement.amount)
+            : -Number(movement.amount);
+          actualsByAccount.set(movement.budget_account_id, current + amount);
         }
       });
 
@@ -694,6 +740,17 @@ export async function getMonthlyTrend(year: number) {
 export async function getAccountsForMonth(year: number, month: number) {
   const budget = await getOrCreateMonthlyBudget(year, month);
   return budget.accounts.filter((a) => a.category === 'EXPENSE').sort((a, b) => {
+    // Put "Otros" at the end
+    if (a.is_otros_account) return 1;
+    if (b.is_otros_account) return -1;
+    return a.order_position - b.order_position;
+  });
+}
+
+// Get SAVINGS accounts for a specific month (for savings form dropdown)
+export async function getSavingsAccountsForMonth(year: number, month: number) {
+  const budget = await getOrCreateMonthlyBudget(year, month);
+  return budget.accounts.filter((a) => a.category === 'SAVINGS').sort((a, b) => {
     // Put "Otros" at the end
     if (a.is_otros_account) return 1;
     if (b.is_otros_account) return -1;

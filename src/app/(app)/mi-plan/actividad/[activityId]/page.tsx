@@ -7,9 +7,11 @@ import { Button } from '@/components/ui/button';
 import { ActivityForm } from '@/components/lifeplan';
 import { getActivity, deleteActivity } from '@/lib/actions/lifeplan-actions';
 import { syncLifePlanActivities } from '@/lib/actions/import-actions';
+import { getGoalsWithYears } from '@/lib/actions/dashboard-actions';
 import { createClient } from '@/lib/supabase/client';
 import type { LifePlanActivity } from '@/lib/types/lifeplan';
-import type { LifeDomain, Goal } from '@/lib/types';
+import type { LifeDomain } from '@/lib/types';
+import type { GoalWithYear } from '@/lib/types/dashboard';
 
 export default function EditActivityPage() {
   const router = useRouter();
@@ -18,7 +20,7 @@ export default function EditActivityPage() {
 
   const [activity, setActivity] = useState<LifePlanActivity | null>(null);
   const [domains, setDomains] = useState<LifeDomain[]>([]);
-  const [goals, setGoals] = useState<Goal[]>([]);
+  const [goals, setGoals] = useState<GoalWithYear[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
 
@@ -35,24 +37,19 @@ export default function EditActivityPage() {
         // Sync goals from wheel and odyssey before loading
         await syncLifePlanActivities();
 
-        const [activityData, { data: domainsData }, { data: goalsData }] = await Promise.all([
+        const [activityData, { data: domainsData }, goalsResponse] = await Promise.all([
           getActivity(activityId),
           supabase
             .from('life_domains')
             .select('*')
             .eq('user_id', user.id)
             .order('order_position'),
-          supabase
-            .from('goals')
-            .select('*')
-            .eq('user_id', user.id)
-            .eq('is_archived', false)
-            .order('created_at', { ascending: false }),
+          getGoalsWithYears(),
         ]);
 
         setActivity(activityData);
         setDomains(domainsData || []);
-        setGoals(goalsData || []);
+        setGoals(goalsResponse.goals);
       } catch (error) {
         console.error('Error loading activity:', error);
         router.push('/mi-plan/hoy');

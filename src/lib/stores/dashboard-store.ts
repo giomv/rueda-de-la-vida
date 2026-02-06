@@ -14,8 +14,9 @@ import type {
   ActionGridData,
   DomainsSummaryResponse,
   MetasSummaryResponse,
+  GoalWithYear,
 } from '@/lib/types/dashboard';
-import type { LifeDomain, Goal } from '@/lib/types';
+import type { LifeDomain } from '@/lib/types';
 
 interface DashboardState {
   // Filters
@@ -42,7 +43,7 @@ interface DashboardState {
 
   // Reference data
   domains: LifeDomain[];
-  goals: Goal[];
+  goals: GoalWithYear[];
 
   // UI state
   isLoading: boolean;
@@ -76,7 +77,7 @@ interface DashboardState {
 
   // Reference data setters
   setDomains: (d: LifeDomain[]) => void;
-  setGoals: (g: Goal[]) => void;
+  setGoals: (g: GoalWithYear[]) => void;
 
   // UI setters
   setIsLoading: (l: boolean) => void;

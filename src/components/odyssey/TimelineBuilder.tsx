@@ -10,7 +10,7 @@ import type { OdysseyMilestone, MilestoneCategory, MilestoneTag, LifeDomain } fr
 interface TimelineBuilderProps {
   milestones: OdysseyMilestone[];
   yearNames?: Record<string, string>;
-  onAdd: (data: { title: string; description: string; category: MilestoneCategory | null; domain_id: string | null; tag: MilestoneTag; year: number }) => void;
+  onAdd: (data: { title: string; description: string; category: MilestoneCategory | null; domain_id: string | null; tag: MilestoneTag; year: number; replicateToAllYears?: boolean }) => void;
   onEdit: (milestoneId: string, data: { title: string; description: string; category: MilestoneCategory | null; domain_id: string | null; tag: MilestoneTag; year: number }) => void;
   onDelete: (milestoneId: string) => void;
   onYearNameChange?: (year: number, name: string) => void;

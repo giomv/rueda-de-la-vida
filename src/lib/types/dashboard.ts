@@ -232,6 +232,29 @@ export const SATISFACTION_SCALE = [
   { value: 5, label: 'Excelente' },
 ];
 
+// ===== GOAL WITH YEAR TYPE =====
+
+export interface GoalWithYear {
+  id: string;
+  user_id: string;
+  domain_id: string | null;
+  title: string;
+  metric: string | null;
+  target_date: string | null;
+  origin: 'WHEEL' | 'ODYSSEY' | 'MANUAL';
+  source_wheel_id: string | null;
+  source_odyssey_id: string | null;
+  is_archived: boolean;
+  created_at: string;
+  updated_at: string;
+  yearIndex: number | null; // Year from active Plan de Vida (1, 2, 3, etc.) or null if not linked
+}
+
+export interface GoalsWithYearsResponse {
+  goals: GoalWithYear[];
+  availableYears: number[]; // Years that have goals from the active Plan de Vida
+}
+
 // ===== METAS SUMMARY TYPES =====
 
 export interface MetaSummaryItem {
@@ -287,8 +310,7 @@ export interface MonthlyGridData {
   actions: Array<{
     id: string;
     name: string;
-    completedWeekIndex: number | null;
-    statusByWeekIndex: Record<number, boolean>;
+    completed: boolean; // Monthly completion status based on period_key = YYYY-MM
   }>;
 }
 

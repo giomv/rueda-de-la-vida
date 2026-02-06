@@ -1,0 +1,191 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { getSavingsAccountsForMonth } from '@/lib/actions/finances-actions';
+import { createSavingsMovement, updateSavingsMovement } from '@/lib/actions/savings-actions';
+import { getUserDomains } from '@/lib/actions/domain-actions';
+import type { BudgetAccount } from '@/lib/types/finances';
+import type { LifeDomain } from '@/lib/types';
+import type { SavingsMovement } from '@/lib/types/dashboard';
+
+interface SavingsFormProps {
+  savings?: SavingsMovement;
+  onSuccess?: () => void;
+}
+
+export function SavingsForm({ savings, onSuccess }: SavingsFormProps) {
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  const [accounts, setAccounts] = useState<BudgetAccount[]>([]);
+  const [domains, setDomains] = useState<LifeDomain[]>([]);
+
+  // Use local date to avoid timezone issues
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const [amount, setAmount] = useState(savings?.amount?.toString() || '');
+  const [date, setDate] = useState(savings?.date || today);
+  const [accountId, setAccountId] = useState(savings?.budget_account_id || '__none__');
+  const [domainId, setDomainId] = useState(savings?.domain_id || '__none__');
+  const [note, setNote] = useState(savings?.note || '');
+
+  // Load accounts and domains
+  useEffect(() => {
+    async function loadData() {
+      const [year, month] = date.split('-').map(Number);
+      const [accountsData, domainsData] = await Promise.all([
+        getSavingsAccountsForMonth(year, month),
+        getUserDomains(),
+      ]);
+      setAccounts(accountsData);
+      setDomains(domainsData);
+    }
+    loadData();
+  }, [date]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!amount || parseFloat(amount) <= 0) return;
+
+    setIsLoading(true);
+    try {
+      const finalAccountId = accountId === '__none__' ? null : accountId;
+      const finalDomainId = domainId === '__none__' ? null : domainId;
+
+      if (savings) {
+        await updateSavingsMovement(savings.id, {
+          amount: parseFloat(amount),
+          date,
+          budget_account_id: finalAccountId,
+          domain_id: finalDomainId,
+          note: note || null,
+        });
+      } else {
+        await createSavingsMovement({
+          amount: parseFloat(amount),
+          date,
+          budget_account_id: finalAccountId,
+          domain_id: finalDomainId,
+          note: note || null,
+          movement_type: 'deposit',
+        });
+      }
+
+      // Reset form after successful save (for new savings)
+      if (!savings) {
+        setAmount('');
+        setAccountId('__none__');
+        setDomainId('__none__');
+        setNote('');
+      }
+
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        router.refresh();
+      }
+    } catch (error) {
+      console.error('Error saving savings movement:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="amount">Monto</Label>
+        <div className="relative">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+            S/
+          </span>
+          <Input
+            id="amount"
+            type="number"
+            step="0.01"
+            min="0.01"
+            placeholder="0.00"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            className="pl-9 text-2xl h-14"
+            required
+            autoFocus
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="date">Fecha</Label>
+        <Input
+          id="date"
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          required
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="account">Cuenta de ahorro (opcional)</Label>
+        <Select value={accountId} onValueChange={setAccountId}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Seleccionar cuenta..." />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none__">Sin asignar (Otros)</SelectItem>
+            {accounts.map((account) => (
+              <SelectItem key={account.id} value={account.id}>
+                {account.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="domain">Dominio de vida (opcional)</Label>
+        <Select value={domainId} onValueChange={setDomainId}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Seleccionar dominio..." />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none__">Sin dominio</SelectItem>
+            {domains.map((domain) => (
+              <SelectItem key={domain.id} value={domain.id}>
+                {domain.icon} {domain.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="note">Nota (opcional)</Label>
+        <Textarea
+          id="note"
+          placeholder="Descripcion del ahorro..."
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          rows={2}
+        />
+      </div>
+
+      <Button type="submit" className="w-full" disabled={isLoading}>
+        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        {savings ? 'Guardar cambios' : 'Agregar ahorro'}
+      </Button>
+    </form>
+  );
+}

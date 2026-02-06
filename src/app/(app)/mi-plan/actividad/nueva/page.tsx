@@ -7,12 +7,14 @@ import { Button } from '@/components/ui/button';
 import { ActivityForm } from '@/components/lifeplan';
 import { createClient } from '@/lib/supabase/client';
 import { syncLifePlanActivities } from '@/lib/actions/import-actions';
-import type { LifeDomain, Goal } from '@/lib/types';
+import { getGoalsWithYears } from '@/lib/actions/dashboard-actions';
+import type { LifeDomain } from '@/lib/types';
+import type { GoalWithYear } from '@/lib/types/dashboard';
 
 export default function NuevaActividadPage() {
   const router = useRouter();
   const [domains, setDomains] = useState<LifeDomain[]>([]);
-  const [goals, setGoals] = useState<Goal[]>([]);
+  const [goals, setGoals] = useState<GoalWithYear[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -27,22 +29,18 @@ export default function NuevaActividadPage() {
       // Sync goals from wheel and odyssey before loading
       await syncLifePlanActivities();
 
-      const [{ data: domainsData }, { data: goalsData }] = await Promise.all([
+      // Fetch domains and goals with year information in parallel
+      const [{ data: domainsData }, goalsResponse] = await Promise.all([
         supabase
           .from('life_domains')
           .select('*')
           .eq('user_id', user.id)
           .order('order_position'),
-        supabase
-          .from('goals')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('is_archived', false)
-          .order('created_at', { ascending: false }),
+        getGoalsWithYears(),
       ]);
 
       setDomains(domainsData || []);
-      setGoals(goalsData || []);
+      setGoals(goalsResponse.goals);
       setLoading(false);
     }
 
