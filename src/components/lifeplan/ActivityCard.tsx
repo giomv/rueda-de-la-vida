@@ -114,6 +114,9 @@ export function ActivityCard({
         <div className="flex items-start gap-3">
           {/* Checkbox */}
           <button
+            role="checkbox"
+            aria-checked={isCompleted}
+            aria-label={`Marcar "${activity.title}" como ${isCompleted ? 'pendiente' : 'completada'}`}
             onClick={handleToggle}
             disabled={disabled || isUpdating}
             className={cn(

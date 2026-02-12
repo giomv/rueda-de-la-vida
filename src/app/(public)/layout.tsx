@@ -17,18 +17,21 @@ export default function PublicLayout({
           </Link>
           <nav className="flex items-center gap-4">
             <Link
-              href="/como-funciona"
+              href="/#modelos"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors hidden sm:inline"
             >
-              ¿Cómo funciona?
+              Modelos
+            </Link>
+            <Link
+              href="/#faq"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors hidden sm:inline"
+            >
+              FAQ
             </Link>
             <Link href="/login">
               <Button variant="ghost" size="sm">
                 Iniciar sesión
               </Button>
-            </Link>
-            <Link href="/registro">
-              <Button size="sm">Registrarse</Button>
             </Link>
           </nav>
         </div>
@@ -36,7 +39,7 @@ export default function PublicLayout({
       <main className="flex-1">{children}</main>
       <footer className="border-t border-border bg-card py-8">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p>VIA - Rueda de la Vida. Tu herramienta de autoconocimiento.</p>
+          <p>VIA — Diseña tu vida con intención.</p>
         </div>
       </footer>
     </div>

@@ -80,12 +80,6 @@ export default function LoginPage() {
             <Link href="/recuperar-clave" className="text-muted-foreground hover:text-foreground">
               ¿Olvidaste tu contraseña?
             </Link>
-            <p className="text-muted-foreground">
-              ¿No tienes cuenta?{' '}
-              <Link href="/registro" className="text-primary hover:underline">
-                Regístrate
-              </Link>
-            </p>
           </div>
         </form>
       </CardContent>

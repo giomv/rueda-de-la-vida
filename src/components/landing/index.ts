@@ -1,0 +1,16 @@
+export { Hero } from './Hero';
+export { ProblemSection } from './ProblemSection';
+export { DimensionsGrid } from './DimensionsGrid';
+export { PositioningSection } from './PositioningSection';
+export { HowItWorksSection } from './HowItWorksSection';
+export { WhoItsForSection } from './WhoItsForSection';
+export { TestimonialList } from './TestimonialList';
+export { PricingCards } from './PricingCards';
+export { FounderSection } from './FounderSection';
+export { OutcomesSection } from './OutcomesSection';
+export { FaqSection } from './FaqSection';
+export { FinalCtaSection } from './FinalCtaSection';
+export { ScholarshipSection } from './ScholarshipSection';
+export { StickyCta } from './StickyCta';
+export { CtaButton } from './CtaButton';
+export { Section } from './Section';

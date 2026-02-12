@@ -6,8 +6,6 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   CircleDot,
-  GitCompareArrows,
-  Heart,
   User,
   HelpCircle,
   Map,
@@ -28,8 +26,6 @@ const navItems = [
   { href: '/finanzas', label: 'Finanzas', icon: Wallet },
   { href: '/mis-ruedas', label: 'Mis Ruedas', icon: CircleDot },
   { href: '/plan-de-vida', label: 'Plan de Vida', icon: Map },
-  { href: '/comparar', label: 'Comparar', icon: GitCompareArrows },
-  { href: '/pareja', label: 'Pareja', icon: Heart },
   { href: '/perfil', label: 'Perfil', icon: User },
   { href: '/ayuda', label: 'Ayuda', icon: HelpCircle },
 ];

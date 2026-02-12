@@ -336,11 +336,11 @@ export const useLifePlanStore = create<LifePlanStoreState>((set, get) => ({
           // If no scheduled days, always show
           return true;
         case 'MONTHLY':
-          // Show if pending (not completed this month)
-          return !isCompletedForPeriod(monthPeriodKey);
+          // Always show — completed renders with strikethrough
+          return true;
         case 'ONCE':
-          // Show if never completed
-          return !isCompletedForPeriod('ONCE');
+          // Always show — completed renders with strikethrough
+          return true;
         default:
           return true;
       }
@@ -377,30 +377,30 @@ export const useLifePlanStore = create<LifePlanStoreState>((set, get) => ({
           return true;
 
         case 'week':
-          // Week view: weekly activities + pending monthly + pending once
+          // Week view: weekly + monthly + once (completed stay visible with strikethrough)
           switch (activity.frequency_type) {
             case 'DAILY':
               return false; // Daily shown in day view only
             case 'WEEKLY':
-              return true; // All weekly activities
+              return true;
             case 'MONTHLY':
-              return !isCompletedForPeriod(monthPeriodKey); // Pending monthly
+              return true;
             case 'ONCE':
-              return !isCompletedForPeriod('ONCE'); // Pending once
+              return true;
             default:
               return false;
           }
 
         case 'month':
-          // Month view: monthly activities + pending once
+          // Month view: monthly + once (completed stay visible with strikethrough)
           switch (activity.frequency_type) {
             case 'DAILY':
             case 'WEEKLY':
               return false;
             case 'MONTHLY':
-              return true; // All monthly activities
+              return true;
             case 'ONCE':
-              return !isCompletedForPeriod('ONCE'); // Pending once
+              return true;
             default:
               return false;
           }
