@@ -5,7 +5,7 @@ import { useOdysseyStore } from '@/lib/stores/odyssey-store';
 
 export function useOdysseyAutoSave(
   saveFn: () => Promise<void>,
-  delay: number = 2000
+  delay: number = 1000
 ) {
   const isDirty = useOdysseyStore((s) => s.isDirty);
   const markClean = useOdysseyStore((s) => s.markClean);

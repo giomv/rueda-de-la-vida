@@ -1,7 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
-import type { Wheel, LifeDomain } from '@/lib/types';
+import type { Wheel, LifeDomain, PlanGoal } from '@/lib/types';
 import type { Goal } from '@/lib/types/lifeplan';
 import type { OdysseyGoalAssignment, GoalWithAssignment } from '@/lib/types/odyssey';
 
@@ -73,9 +73,27 @@ export async function importWheelGoalsToOdyssey(odysseyId: string, wheelId: stri
     return { importedCount: 0, skippedCount: 0, totalActionPlans: 0, goalsWithText: 0 };
   }
 
-  // Count action plans with goal_text
-  const goalsWithText = actionPlans.filter(p => p.goal_text).length;
-  console.log('[importWheelGoalsToOdyssey] Action plans with goal_text:', goalsWithText);
+  // Build flat list of goals from all plans (prefer goals array, fall back to goal_text)
+  let totalGoalTexts = 0;
+  const allGoalEntries: { text: string; domainName?: string }[] = [];
+  for (const plan of actionPlans) {
+    const planGoals: PlanGoal[] = (plan.goals as PlanGoal[] | null)?.length
+      ? (plan.goals as PlanGoal[])
+      : plan.goal_text
+        ? [{ id: 'legacy', text: plan.goal_text }]
+        : [];
+
+    const domainName = (plan.domains as { name?: string })?.name?.toLowerCase();
+    for (const pg of planGoals) {
+      if (pg.text) {
+        allGoalEntries.push({ text: pg.text, domainName });
+        totalGoalTexts++;
+      }
+    }
+  }
+
+  const goalsWithText = totalGoalTexts;
+  console.log('[importWheelGoalsToOdyssey] Goals with text:', goalsWithText);
 
   // Get user's life domains for mapping
   const { data: lifeDomains } = await supabase
@@ -86,13 +104,10 @@ export async function importWheelGoalsToOdyssey(odysseyId: string, wheelId: stri
   let importedCount = 0;
   let skippedCount = 0;
 
-  for (const plan of actionPlans) {
-    if (!plan.goal_text) continue;
-
+  for (const entry of allGoalEntries) {
     // Match domain by name (case insensitive)
-    const domainName = (plan.domains as { name?: string })?.name?.toLowerCase();
     const matchedDomain = lifeDomains?.find(
-      (d) => d.name.toLowerCase() === domainName || d.slug === domainName
+      (d) => d.name.toLowerCase() === entry.domainName || d.slug === entry.domainName
     );
 
     // Check if goal already exists from this wheel
@@ -101,7 +116,7 @@ export async function importWheelGoalsToOdyssey(odysseyId: string, wheelId: stri
       .select('id')
       .eq('user_id', user.id)
       .eq('source_wheel_id', wheelId)
-      .eq('title', plan.goal_text)
+      .eq('title', entry.text)
       .single();
 
     if (existingGoal) {
@@ -114,7 +129,7 @@ export async function importWheelGoalsToOdyssey(odysseyId: string, wheelId: stri
       .from('goals')
       .insert({
         user_id: user.id,
-        title: plan.goal_text,
+        title: entry.text,
         domain_id: matchedDomain?.id || null,
         origin: 'WHEEL',
         source_wheel_id: wheelId,

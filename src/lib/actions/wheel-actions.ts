@@ -1,7 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
-import type { Domain, Score, Priority, Reflection, IdealLife, ActionPlan } from '@/lib/types';
+import type { Domain, Score, Priority, Reflection, IdealLife, ActionPlan, PlanGoal } from '@/lib/types';
 
 export async function createWheel(title: string, mode: 'individual' | 'pareja' | 'compartida' = 'individual') {
   const supabase = await createClient();
@@ -200,8 +200,12 @@ export async function saveIdealLife(wheelId: string, items: { domain_id: string;
   }
 }
 
-export async function saveActionPlan(wheelId: string, plan: { domain_id: string; goal_text: string; target_score: number; actions: { id: string; text: string; completed: boolean }[] }) {
+export async function saveActionPlan(wheelId: string, plan: { domain_id: string; goal_text: string; target_score: number; goals?: PlanGoal[]; actions: { id: string; text: string; completed: boolean; goal_id?: string | null }[] }) {
   const supabase = await createClient();
+
+  const goals = plan.goals ?? [];
+  // Derive legacy goal_text from first goal for backward compat
+  const goalText = goals.length > 0 ? goals[0].text : plan.goal_text;
 
   const { data: existing } = await supabase
     .from('action_plans')
@@ -210,22 +214,23 @@ export async function saveActionPlan(wheelId: string, plan: { domain_id: string;
     .eq('domain_id', plan.domain_id)
     .single();
 
+  const payload = {
+    goal_text: goalText,
+    goals,
+    target_score: plan.target_score,
+    actions: plan.actions,
+  };
+
   if (existing) {
     await supabase
       .from('action_plans')
-      .update({
-        goal_text: plan.goal_text,
-        target_score: plan.target_score,
-        actions: plan.actions,
-      })
+      .update(payload)
       .eq('id', existing.id);
   } else {
     await supabase.from('action_plans').insert({
       wheel_id: wheelId,
       domain_id: plan.domain_id,
-      goal_text: plan.goal_text,
-      target_score: plan.target_score,
-      actions: plan.actions,
+      ...payload,
     });
   }
 }

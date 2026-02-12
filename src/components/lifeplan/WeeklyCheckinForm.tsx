@@ -46,7 +46,7 @@ export function WeeklyCheckinForm({
       onSave?.(checkin);
 
       // Clear saved indicator after 2 seconds
-      setTimeout(() => setSaved(false), 2000);
+      setTimeout(() => setSaved(false), 1000);
     } finally {
       setIsSaving(false);
     }

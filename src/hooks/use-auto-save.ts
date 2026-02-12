@@ -5,7 +5,7 @@ import { useWizardStore } from '@/lib/stores/wizard-store';
 
 export function useAutoSave(
   saveFn: () => Promise<void>,
-  delay: number = 2000
+  delay: number = 1000
 ) {
   const isDirty = useWizardStore((s) => s.isDirty);
   const markClean = useWizardStore((s) => s.markClean);

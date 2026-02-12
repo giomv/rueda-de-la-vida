@@ -61,11 +61,17 @@ export interface IdealLife {
   created_at: string;
 }
 
+export interface PlanGoal {
+  id: string;
+  text: string;
+}
+
 export interface ActionPlan {
   id: string;
   wheel_id: string;
   domain_id: string;
   goal_text: string | null;
+  goals: PlanGoal[];
   target_score: number | null;
   actions: ActionItem[];
   created_at: string;

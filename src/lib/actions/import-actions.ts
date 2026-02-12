@@ -1,10 +1,12 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
-import type { ImportResult } from '@/lib/types/lifeplan';
+import type { ImportResult, ImportSources } from '@/lib/types/lifeplan';
+import type { PlanGoal } from '@/lib/types';
 
 // Import activities from a specific wheel's action plans
 export async function importFromWheel(wheelId: string): Promise<number> {
+  console.log('[importFromWheel] Starting with wheelId:', wheelId);
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('No autenticado');
@@ -17,6 +19,7 @@ export async function importFromWheel(wheelId: string): Promise<number> {
     .eq('user_id', user.id)
     .single();
 
+  console.log('[importFromWheel] wheel:', wheel, 'error:', wheelError);
   if (wheelError || !wheel) return 0;
 
   // Get action plans for this wheel
@@ -25,6 +28,12 @@ export async function importFromWheel(wheelId: string): Promise<number> {
     .select('*, domains(id, name)')
     .eq('wheel_id', wheelId);
 
+  console.log('[importFromWheel] actionPlans count:', actionPlans?.length, 'error:', plansError);
+  if (actionPlans?.length) {
+    for (const plan of actionPlans) {
+      console.log('[importFromWheel] plan domain:', plan.domains?.name, 'goal:', plan.goal_text, 'actions:', JSON.stringify(plan.actions));
+    }
+  }
   if (plansError || !actionPlans?.length) return 0;
 
   // Get user's life domains for mapping
@@ -42,26 +51,34 @@ export async function importFromWheel(wheelId: string): Promise<number> {
       (d) => d.name.toLowerCase() === domainName || d.slug === domainName
     );
 
-    // Create or find goal from goal_text
-    let goalId: string | null = null;
-    if (plan.goal_text) {
-      // Check if goal already exists from this wheel
+    // Build goals list: prefer goals array, fall back to goal_text
+    const planGoals: PlanGoal[] = (plan.goals as PlanGoal[] | null)?.length
+      ? (plan.goals as PlanGoal[])
+      : plan.goal_text
+        ? [{ id: 'legacy', text: plan.goal_text }]
+        : [];
+
+    // Create or find goals and build a map of wheel-goal-id -> lifeplan-goal-id
+    const goalIdMap: Record<string, string> = {};
+    for (const pg of planGoals) {
+      if (!pg.text) continue;
+
       const { data: existingGoal } = await supabase
         .from('goals')
         .select('id')
         .eq('user_id', user.id)
         .eq('source_wheel_id', wheelId)
-        .eq('title', plan.goal_text)
+        .eq('title', pg.text)
         .single();
 
       if (existingGoal) {
-        goalId = existingGoal.id;
+        goalIdMap[pg.id] = existingGoal.id;
       } else {
         const { data: newGoal } = await supabase
           .from('goals')
           .insert({
             user_id: user.id,
-            title: plan.goal_text,
+            title: pg.text,
             domain_id: matchedDomain?.id || null,
             origin: 'WHEEL',
             source_wheel_id: wheelId,
@@ -70,14 +87,26 @@ export async function importFromWheel(wheelId: string): Promise<number> {
           .select()
           .single();
 
-        goalId = newGoal?.id || null;
+        if (newGoal) goalIdMap[pg.id] = newGoal.id;
       }
     }
 
+    // Fallback goal id: first goal in the map
+    const fallbackGoalId = Object.values(goalIdMap)[0] || null;
+
     // Import each action as an activity
     const actions = plan.actions || [];
+    console.log('[importFromWheel] Processing', actions.length, 'actions for domain:', plan.domains?.name);
     for (const action of actions) {
-      if (!action.text) continue;
+      if (!action.text) {
+        console.log('[importFromWheel] Skipping action without text:', action);
+        continue;
+      }
+
+      // Resolve goal_id: use action's goal_id to look up lifeplan goal, fallback to first goal
+      const resolvedGoalId = action.goal_id && goalIdMap[action.goal_id]
+        ? goalIdMap[action.goal_id]
+        : fallbackGoalId;
 
       // Check if activity already exists (deduplication by source)
       const sourceId = `${wheelId}_${plan.domain_id}_${action.id}`;
@@ -89,8 +118,12 @@ export async function importFromWheel(wheelId: string): Promise<number> {
         .eq('source_id', sourceId)
         .single();
 
-      if (existing) continue;
+      if (existing) {
+        console.log('[importFromWheel] Already exists, skipping:', action.text, 'sourceId:', sourceId);
+        continue;
+      }
 
+      console.log('[importFromWheel] Inserting activity:', action.text, 'sourceId:', sourceId);
       // Create activity
       const { error: activityError } = await supabase
         .from('lifeplan_activities')
@@ -98,17 +131,22 @@ export async function importFromWheel(wheelId: string): Promise<number> {
           user_id: user.id,
           title: action.text,
           domain_id: matchedDomain?.id || null,
-          goal_id: goalId,
+          goal_id: resolvedGoalId,
           source_type: 'WHEEL',
           source_id: sourceId,
           frequency_type: action.frequency_type || 'WEEKLY',
           frequency_value: 1,
         });
 
-      if (!activityError) importedCount++;
+      if (activityError) {
+        console.log('[importFromWheel] Insert error:', activityError);
+      } else {
+        importedCount++;
+      }
     }
   }
 
+  console.log('[importFromWheel] Done. Total imported:', importedCount);
   return importedCount;
 }
 
@@ -474,4 +512,111 @@ export async function getImportStatus() {
     fromOdyssey: odysseyCount || 0,
     manual: manualCount || 0,
   };
+}
+
+// Get available import sources (wheels and odysseys) for the selection UI
+export async function getImportSources(): Promise<ImportSources> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('No autenticado');
+
+  // Fetch wheels (id, title, created_at) ordered by newest first
+  const { data: wheels } = await supabase
+    .from('wheels')
+    .select('id, title, created_at')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false });
+
+  // Fetch odysseys with their active plan info
+  const { data: odysseys } = await supabase
+    .from('odysseys')
+    .select('id, title, active_plan_number')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false });
+
+  const odysseySources = [];
+  if (odysseys?.length) {
+    for (const odyssey of odysseys) {
+      let activePlanHeadline: string | null = null;
+      let hasPrototype = false;
+
+      if (odyssey.active_plan_number) {
+        // Get the active plan headline
+        const { data: activePlan } = await supabase
+          .from('odyssey_plans')
+          .select('id, headline')
+          .eq('odyssey_id', odyssey.id)
+          .eq('plan_number', odyssey.active_plan_number)
+          .single();
+
+        activePlanHeadline = activePlan?.headline || null;
+
+        // Check if an active prototype exists for this odyssey
+        if (activePlan) {
+          const { count } = await supabase
+            .from('odyssey_prototypes')
+            .select('id', { count: 'exact', head: true })
+            .eq('odyssey_id', odyssey.id)
+            .eq('status', 'active');
+
+          hasPrototype = (count || 0) > 0;
+        }
+      }
+
+      odysseySources.push({
+        id: odyssey.id,
+        title: odyssey.title,
+        active_plan_number: odyssey.active_plan_number,
+        active_plan_headline: activePlanHeadline,
+        has_prototype: hasPrototype,
+      });
+    }
+  }
+
+  return {
+    wheels: wheels || [],
+    odysseys: odysseySources,
+  };
+}
+
+// Import from specific selected sources
+export async function importSelectedSources(
+  wheelId?: string | null,
+  odysseyId?: string | null
+): Promise<ImportResult> {
+  console.log('[importSelectedSources] Called with wheelId:', wheelId, 'odysseyId:', odysseyId);
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('No autenticado');
+
+  const results: ImportResult = { fromWheel: 0, fromOdyssey: 0 };
+
+  // Import from selected wheel
+  if (wheelId) {
+    console.log('[importSelectedSources] Importing from wheel:', wheelId);
+    results.fromWheel = await importFromWheel(wheelId);
+    console.log('[importSelectedSources] Wheel result:', results.fromWheel);
+  }
+
+  // Import from selected odyssey
+  if (odysseyId) {
+    // Import goals from milestones
+    await importGoalsFromOdyssey(odysseyId);
+
+    // Find the active prototype for this odyssey
+    const { data: prototype } = await supabase
+      .from('odyssey_prototypes')
+      .select('id, odysseys!inner(user_id)')
+      .eq('odyssey_id', odysseyId)
+      .eq('odysseys.user_id', user.id)
+      .eq('status', 'active')
+      .single();
+
+    if (prototype) {
+      results.fromOdyssey = await importFromOdyssey(prototype.id);
+      results.fromOdyssey += await importActionsFromOdyssey(prototype.id);
+    }
+  }
+
+  return results;
 }

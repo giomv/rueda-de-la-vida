@@ -39,13 +39,6 @@ export default function HoyPage() {
     setViewMode('day');
   }, [setViewMode]);
 
-  // Auto-sync on first load
-  useEffect(() => {
-    if (!loading && activities.length === 0 && !lastSyncResult) {
-      sync();
-    }
-  }, [loading, activities.length, lastSyncResult, sync]);
-
   const today = formatDate(viewDate);
   const groupedActivities = getGroupedActivitiesForDate(today);
   const { completed, total } = getCompletionRateForView('day', viewDate);
@@ -70,34 +63,25 @@ export default function HoyPage() {
 
   const handleImportComplete = useCallback(() => {
     refresh();
-    setShowImport(false);
   }, [refresh]);
 
-  if (loading) {
-    return (
-      <div className="container max-w-2xl mx-auto px-4 py-8">
-        <div className="animate-pulse space-y-4">
-          <div className="h-10 bg-muted rounded-lg w-full" />
-          <div className="h-40 bg-muted rounded-lg w-full" />
-          <div className="h-20 bg-muted rounded-lg w-full" />
-          <div className="h-20 bg-muted rounded-lg w-full" />
-        </div>
+  const content = loading ? (
+    <div className="container max-w-2xl mx-auto px-4 py-8">
+      <div className="animate-pulse space-y-4">
+        <div className="h-10 bg-muted rounded-lg w-full" />
+        <div className="h-40 bg-muted rounded-lg w-full" />
+        <div className="h-20 bg-muted rounded-lg w-full" />
+        <div className="h-20 bg-muted rounded-lg w-full" />
       </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="container max-w-2xl mx-auto px-4 py-8">
-        <div className="text-center py-12">
-          <p className="text-destructive mb-4">{error}</p>
-          <Button onClick={refresh}>Reintentar</Button>
-        </div>
+    </div>
+  ) : error ? (
+    <div className="container max-w-2xl mx-auto px-4 py-8">
+      <div className="text-center py-12">
+        <p className="text-destructive mb-4">{error}</p>
+        <Button onClick={refresh}>Reintentar</Button>
       </div>
-    );
-  }
-
-  return (
+    </div>
+  ) : (
     <div className="container max-w-2xl mx-auto px-4 py-6 pb-24 md:pb-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
@@ -179,13 +163,18 @@ export default function HoyPage() {
 
       {/* Activity list - grouped by frequency (daily → weekly → monthly → once) */}
       <GroupedActivityList date={today} groupedActivities={groupedActivities} showProgressHeader={false} />
+    </div>
+  );
 
-      {/* Import dialog */}
+  return (
+    <>
+      {content}
+      {/* Import dialog - rendered outside conditionals so it doesn't unmount during refresh */}
       <ImportDialog
         open={showImport}
         onOpenChange={setShowImport}
         onImportComplete={handleImportComplete}
       />
-    </div>
+    </>
   );
 }

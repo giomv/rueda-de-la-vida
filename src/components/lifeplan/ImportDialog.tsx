@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { RefreshCw, Download, Check, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import {
   Dialog,
   DialogContent,
@@ -11,8 +12,15 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { syncLifePlanActivities } from '@/lib/actions/import-actions';
-import type { ImportResult } from '@/lib/types/lifeplan';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { getImportSources, importSelectedSources } from '@/lib/actions/import-actions';
+import type { ImportResult, ImportSources } from '@/lib/types/lifeplan';
 
 interface ImportDialogProps {
   open: boolean;
@@ -21,16 +29,51 @@ interface ImportDialogProps {
 }
 
 export function ImportDialog({ open, onOpenChange, onImportComplete }: ImportDialogProps) {
+  const [sources, setSources] = useState<ImportSources | null>(null);
+  const [loadingSources, setLoadingSources] = useState(false);
+  const [selectedWheelId, setSelectedWheelId] = useState<string | null>(null);
+  const [selectedOdysseyId, setSelectedOdysseyId] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Reset state and fetch sources when dialog opens
+  useEffect(() => {
+    if (!open) {
+      // Reset all state when dialog closes (covers external close via prop)
+      setSources(null);
+      setLoadingSources(false);
+      setSelectedWheelId(null);
+      setSelectedOdysseyId(null);
+      setResult(null);
+      setError(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function fetchSources() {
+      setLoadingSources(true);
+      try {
+        const data = await getImportSources();
+        if (!cancelled) setSources(data);
+      } catch {
+        if (!cancelled) setError('Error al cargar las fuentes');
+      } finally {
+        if (!cancelled) setLoadingSources(false);
+      }
+    }
+
+    fetchSources();
+    return () => { cancelled = true; };
+  }, [open]);
 
   const handleImport = async () => {
     setIsImporting(true);
     setError(null);
 
     try {
-      const importResult = await syncLifePlanActivities();
+      const importResult = await importSelectedSources(selectedWheelId, selectedOdysseyId);
       setResult(importResult);
       onImportComplete?.(importResult);
     } catch (err) {
@@ -41,11 +84,10 @@ export function ImportDialog({ open, onOpenChange, onImportComplete }: ImportDia
   };
 
   const handleClose = () => {
-    setResult(null);
-    setError(null);
     onOpenChange(false);
   };
 
+  const bothNone = !selectedWheelId && !selectedOdysseyId;
   const totalImported = result ? result.fromWheel + result.fromOdyssey : 0;
 
   return (
@@ -57,7 +99,7 @@ export function ImportDialog({ open, onOpenChange, onImportComplete }: ImportDia
             Sincronizar acciones
           </DialogTitle>
           <DialogDescription>
-            Importa automáticamente las acciones desde tu Rueda de la Vida y Plan de vida.
+            Selecciona de dónde importar acciones a tu plan.
           </DialogDescription>
         </DialogHeader>
 
@@ -98,30 +140,65 @@ export function ImportDialog({ open, onOpenChange, onImportComplete }: ImportDia
                 </p>
               )}
             </div>
-          ) : (
+          ) : loadingSources ? (
             <div className="space-y-4">
+              <div className="space-y-2">
+                <div className="h-4 w-32 bg-muted animate-pulse rounded" />
+                <div className="h-10 w-full bg-muted animate-pulse rounded" />
+              </div>
+              <div className="space-y-2">
+                <div className="h-4 w-32 bg-muted animate-pulse rounded" />
+                <div className="h-10 w-full bg-muted animate-pulse rounded" />
+              </div>
+            </div>
+          ) : sources ? (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Rueda de la Vida</Label>
+                <Select
+                  value={selectedWheelId ?? 'none'}
+                  onValueChange={(v) => setSelectedWheelId(v === 'none' ? null : v)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecciona una rueda" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Ninguna</SelectItem>
+                    {sources.wheels.map((w) => (
+                      <SelectItem key={w.id} value={w.id}>
+                        {w.title || 'Sin título'} — {new Date(w.created_at).toLocaleDateString()}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Plan de vida (Odyssey)</Label>
+                <Select
+                  value={selectedOdysseyId ?? 'none'}
+                  onValueChange={(v) => setSelectedOdysseyId(v === 'none' ? null : v)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecciona un plan" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Ninguno</SelectItem>
+                    {sources.odysseys.map((o) => (
+                      <SelectItem key={o.id} value={o.id}>
+                        {o.title || 'Sin título'}
+                        {o.active_plan_headline ? ` — ${o.active_plan_headline}` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <p className="text-sm text-muted-foreground">
-                Esta acción buscará:
-              </p>
-              <ul className="text-sm space-y-2 ml-4">
-                <li className="flex items-start gap-2">
-                  <span className="text-primary">•</span>
-                  <span>
-                    <strong>Rueda de la Vida:</strong> Acciones de tus planes de acción
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-primary">•</span>
-                  <span>
-                    <strong>Plan de vida:</strong> Pasos de tu prototipo activo
-                  </span>
-                </li>
-              </ul>
-              <p className="text-sm text-muted-foreground">
-                Las acciones que ya hayas importado anteriormente no se duplicarán.
+                Las acciones existentes no se duplicarán.
               </p>
             </div>
-          )}
+          ) : null}
         </div>
 
         <DialogFooter>
@@ -132,7 +209,10 @@ export function ImportDialog({ open, onOpenChange, onImportComplete }: ImportDia
               <Button variant="outline" onClick={handleClose}>
                 Cancelar
               </Button>
-              <Button onClick={handleImport} disabled={isImporting}>
+              <Button
+                onClick={handleImport}
+                disabled={isImporting || loadingSources || bothNone}
+              >
                 {isImporting ? (
                   <>
                     <RefreshCw className="w-4 h-4 mr-2 animate-spin" />

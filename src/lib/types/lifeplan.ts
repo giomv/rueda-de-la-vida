@@ -80,6 +80,26 @@ export interface ImportResult {
   fromOdyssey: number;
 }
 
+// Import source types
+export interface ImportSourceWheel {
+  id: string;
+  title: string;
+  created_at: string;
+}
+
+export interface ImportSourceOdyssey {
+  id: string;
+  title: string;
+  active_plan_number: number | null;
+  active_plan_headline: string | null;
+  has_prototype: boolean;
+}
+
+export interface ImportSources {
+  wheels: ImportSourceWheel[];
+  odysseys: ImportSourceOdyssey[];
+}
+
 // Form input types
 export interface CreateActivityInput {
   title: string;

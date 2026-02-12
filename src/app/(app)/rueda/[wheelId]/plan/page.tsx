@@ -13,13 +13,13 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { getWheelData, saveActionPlan } from '@/lib/actions/wheel-actions';
 import { SMARTGoalTooltip } from '@/components/shared/SMARTGoalTooltip';
 import { importFromWheel } from '@/lib/actions/import-actions';
-import { ChevronRight, ChevronLeft, ChevronDown, Plus, X } from 'lucide-react';
-import type { Domain, ActionItem, Reflection, IdealLife, FrequencyType } from '@/lib/types';
+import { ChevronRight, ChevronLeft, ChevronDown, Plus, X, Target } from 'lucide-react';
+import type { Domain, ActionItem, PlanGoal, Reflection, IdealLife, FrequencyType } from '@/lib/types';
 import { REFLECTION_QUESTIONS, IDEAL_LIFE_PROMPTS, FREQUENCY_OPTIONS } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface PlanState {
-  goalText: string;
+  goals: PlanGoal[];
   targetScore: number;
   actions: ActionItem[];
 }
@@ -37,6 +37,7 @@ export default function PlanPage() {
   const [plans, setPlans] = useState<Record<string, PlanState>>({});
   const [newActionText, setNewActionText] = useState<Record<string, string>>({});
   const [newActionFrequency, setNewActionFrequency] = useState<Record<string, FrequencyType>>({});
+  const [newGoalText, setNewGoalText] = useState<Record<string, string>>({});
   const [reflections, setReflections] = useState<Reflection[]>([]);
   const [idealLife, setIdealLife] = useState<IdealLife[]>([]);
 
@@ -53,11 +54,18 @@ export default function PlanPage() {
 
       const planState: Record<string, PlanState> = {};
       const defaultFrequency: Record<string, FrequencyType> = {};
-      // Initialize plans for all domains
       data.domains.forEach((domain) => {
         const existing = data.actionPlans.find((ap) => ap.domain_id === domain.id);
+        // Read goals array, fall back to wrapping goal_text
+        let goals: PlanGoal[] = [];
+        if (existing?.goals && (existing.goals as PlanGoal[]).length > 0) {
+          goals = existing.goals as PlanGoal[];
+        } else if (existing?.goal_text) {
+          goals = [{ id: crypto.randomUUID(), text: existing.goal_text }];
+        }
+
         planState[domain.id] = {
-          goalText: existing?.goal_text || '',
+          goals,
           targetScore: existing?.target_score || 8,
           actions: (existing?.actions as ActionItem[]) || [],
         };
@@ -72,16 +80,61 @@ export default function PlanPage() {
     load();
   }, [wheelId]);
 
-  const handleAddAction = (domainId: string) => {
-    const text = newActionText[domainId]?.trim();
+  // Goal handlers
+  const handleAddGoal = (domainId: string) => {
+    const text = newGoalText[domainId]?.trim();
+    if (!text) return;
+
+    const newGoal: PlanGoal = {
+      id: crypto.randomUUID(),
+      text,
+    };
+
+    setPlans((prev) => ({
+      ...prev,
+      [domainId]: {
+        ...prev[domainId],
+        goals: [...prev[domainId].goals, newGoal],
+      },
+    }));
+    setNewGoalText((prev) => ({ ...prev, [domainId]: '' }));
+  };
+
+  const handleRemoveGoal = (domainId: string, goalId: string) => {
+    setPlans((prev) => ({
+      ...prev,
+      [domainId]: {
+        ...prev[domainId],
+        goals: prev[domainId].goals.filter((g) => g.id !== goalId),
+        // Remove actions linked to this goal or unlink them
+        actions: prev[domainId].actions.filter((a) => a.goal_id !== goalId),
+      },
+    }));
+  };
+
+  const handleUpdateGoalText = (domainId: string, goalId: string, text: string) => {
+    setPlans((prev) => ({
+      ...prev,
+      [domainId]: {
+        ...prev[domainId],
+        goals: prev[domainId].goals.map((g) =>
+          g.id === goalId ? { ...g, text } : g
+        ),
+      },
+    }));
+  };
+
+  const handleAddAction = (domainId: string, goalId: string) => {
+    const key = `${domainId}_${goalId}`;
+    const text = newActionText[key]?.trim();
     if (!text) return;
 
     const newAction: ActionItem = {
       id: crypto.randomUUID(),
       text,
       completed: false,
-      frequency_type: newActionFrequency[domainId] || 'WEEKLY',
-      goal_id: null,
+      frequency_type: newActionFrequency[key] || newActionFrequency[domainId] || 'WEEKLY',
+      goal_id: goalId,
       domain_id: domainId,
     };
 
@@ -92,8 +145,8 @@ export default function PlanPage() {
         actions: [...prev[domainId].actions, newAction],
       },
     }));
-    setNewActionText((prev) => ({ ...prev, [domainId]: '' }));
-    setNewActionFrequency((prev) => ({ ...prev, [domainId]: 'WEEKLY' }));
+    setNewActionText((prev) => ({ ...prev, [key]: '' }));
+    setNewActionFrequency((prev) => ({ ...prev, [key]: 'WEEKLY' }));
   };
 
   const handleRemoveAction = (domainId: string, actionId: string) => {
@@ -134,8 +187,9 @@ export default function PlanPage() {
     for (const [domainId, plan] of Object.entries(plans)) {
       await saveActionPlan(wheelId, {
         domain_id: domainId,
-        goal_text: plan.goalText,
+        goal_text: plan.goals[0]?.text || '',
         target_score: plan.targetScore,
+        goals: plan.goals,
         actions: plan.actions,
       });
     }
@@ -144,6 +198,146 @@ export default function PlanPage() {
     await importFromWheel(wheelId);
 
     router.push('/mi-plan');
+  };
+
+  // Render the goal sections for a domain
+  const renderGoalSections = (domainId: string, plan: PlanState) => {
+    const goalsToRender = plan.goals;
+
+    return (
+      <div className="space-y-4">
+        {goalsToRender.map((goal, idx) => {
+          const goalActions = plan.actions.filter((a) => a.goal_id === goal.id);
+          const actionKey = `${domainId}_${goal.id}`;
+
+          return (
+            <div key={goal.id} className="space-y-3 rounded-lg border border-border p-3">
+              <div className="space-y-2">
+                <div className="flex items-center gap-1.5">
+                  <Target className="h-3.5 w-3.5 text-muted-foreground" />
+                  <Label className="text-sm font-medium">Meta {goalsToRender.length > 1 ? idx + 1 : ''}</Label>
+                  <SMARTGoalTooltip source="rueda" />
+                  {goalsToRender.length > 1 && (
+                    <button
+                      onClick={() => handleRemoveGoal(domainId, goal.id)}
+                      className="ml-auto text-muted-foreground hover:text-destructive transition-colors"
+                      title="Eliminar meta"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+                <Input
+                  placeholder="¿Qué quieres lograr en esta área?"
+                  value={goal.text}
+                  onChange={(e) => handleUpdateGoalText(domainId, goal.id, e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm">Acciones</Label>
+                <div className="space-y-2">
+                  {goalActions.map((action) => {
+                    const freqLabel = FREQUENCY_OPTIONS.find(f => f.key === action.frequency_type)?.label || 'Semanal';
+                    return (
+                      <div key={action.id} className="flex items-start gap-2 group p-2 rounded-md hover:bg-muted/50">
+                        <Checkbox
+                          checked={action.completed}
+                          onCheckedChange={() => handleToggleAction(domainId, action.id)}
+                          className="mt-0.5"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <span className={`text-sm ${action.completed ? 'line-through text-muted-foreground' : ''}`}>
+                            {action.text}
+                          </span>
+                          <div className="flex gap-2 mt-1 flex-wrap">
+                            <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 px-1.5 py-0.5 rounded">
+                              {freqLabel}
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleRemoveAction(domainId, action.id)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="h-3 w-3 text-muted-foreground" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="space-y-2 pt-2 border-t border-border">
+                  <Input
+                    placeholder="Nueva acción..."
+                    value={newActionText[actionKey] || ''}
+                    onChange={(e) =>
+                      setNewActionText((prev) => ({
+                        ...prev,
+                        [actionKey]: e.target.value,
+                      }))
+                    }
+                    onKeyDown={(e) =>
+                      e.key === 'Enter' && handleAddAction(domainId, goal.id)
+                    }
+                    className="text-sm"
+                  />
+                  <div className="flex gap-2 flex-wrap">
+                    <Select
+                      value={newActionFrequency[actionKey] || 'WEEKLY'}
+                      onValueChange={(val) =>
+                        setNewActionFrequency((prev) => ({
+                          ...prev,
+                          [actionKey]: val as FrequencyType,
+                        }))
+                      }
+                    >
+                      <SelectTrigger size="sm" className="w-[120px]">
+                        <SelectValue placeholder="Frecuencia" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {FREQUENCY_OPTIONS.map((opt) => (
+                          <SelectItem key={opt.key} value={opt.key}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleAddAction(domainId, goal.id)}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Add goal input */}
+        <div className="flex gap-2 items-center">
+          <Input
+            placeholder="Agregar otra meta..."
+            value={newGoalText[domainId] || ''}
+            onChange={(e) =>
+              setNewGoalText((prev) => ({ ...prev, [domainId]: e.target.value }))
+            }
+            onKeyDown={(e) => e.key === 'Enter' && handleAddGoal(domainId)}
+            className="text-sm"
+          />
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleAddGoal(domainId)}
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Meta
+          </Button>
+        </div>
+      </div>
+    );
   };
 
   if (loading) {
@@ -170,7 +364,7 @@ export default function PlanPage() {
         <Accordion type="single" collapsible className="w-full">
           <AccordionItem value="reflections">
             <AccordionTrigger className="text-sm">
-              📝 Mis reflexiones
+              Mis reflexiones
             </AccordionTrigger>
             <AccordionContent>
               <div className="space-y-3 text-sm">
@@ -193,7 +387,7 @@ export default function PlanPage() {
 
           <AccordionItem value="ideal-life">
             <AccordionTrigger className="text-sm">
-              ✨ Mi vida ideal
+              Mi vida ideal
             </AccordionTrigger>
             <AccordionContent>
               <div className="space-y-4 text-sm">
@@ -242,104 +436,8 @@ export default function PlanPage() {
                   {domain.name}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-1.5">
-                    <Label className="text-sm">Meta</Label>
-                    <SMARTGoalTooltip source="rueda" />
-                  </div>
-                  <Input
-                    placeholder="¿Qué quieres lograr en esta área?"
-                    value={plan.goalText}
-                    onChange={(e) =>
-                      setPlans((prev) => ({
-                        ...prev,
-                        [domain.id]: { ...prev[domain.id], goalText: e.target.value },
-                      }))
-                    }
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-sm">Acciones</Label>
-                  <div className="space-y-2">
-                    {plan.actions.map((action) => {
-                      const freqLabel = FREQUENCY_OPTIONS.find(f => f.key === action.frequency_type)?.label || 'Semanal';
-                      return (
-                        <div key={action.id} className="flex items-start gap-2 group p-2 rounded-md hover:bg-muted/50">
-                          <Checkbox
-                            checked={action.completed}
-                            onCheckedChange={() =>
-                              handleToggleAction(domain.id, action.id)
-                            }
-                            className="mt-0.5"
-                          />
-                          <div className="flex-1 min-w-0">
-                            <span className={`text-sm ${action.completed ? 'line-through text-muted-foreground' : ''}`}>
-                              {action.text}
-                            </span>
-                            <div className="flex gap-2 mt-1 flex-wrap">
-                              <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 px-1.5 py-0.5 rounded">
-                                {freqLabel}
-                              </span>
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => handleRemoveAction(domain.id, action.id)}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <X className="h-3 w-3 text-muted-foreground" />
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <div className="space-y-2 pt-2 border-t border-border">
-                    <Input
-                      placeholder="Nueva acción..."
-                      value={newActionText[domain.id] || ''}
-                      onChange={(e) =>
-                        setNewActionText((prev) => ({
-                          ...prev,
-                          [domain.id]: e.target.value,
-                        }))
-                      }
-                      onKeyDown={(e) =>
-                        e.key === 'Enter' && handleAddAction(domain.id)
-                      }
-                      className="text-sm"
-                    />
-                    <div className="flex gap-2 flex-wrap">
-                      <Select
-                        value={newActionFrequency[domain.id] || 'WEEKLY'}
-                        onValueChange={(val) =>
-                          setNewActionFrequency((prev) => ({
-                            ...prev,
-                            [domain.id]: val as FrequencyType,
-                          }))
-                        }
-                      >
-                        <SelectTrigger size="sm" className="w-[120px]">
-                          <SelectValue placeholder="Frecuencia" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {FREQUENCY_OPTIONS.map((opt) => (
-                            <SelectItem key={opt.key} value={opt.key}>
-                              {opt.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleAddAction(domain.id)}
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
+              <CardContent>
+                {renderGoalSections(domain.id, plan)}
               </CardContent>
             </Card>
           );
@@ -363,6 +461,7 @@ export default function PlanPage() {
                   const plan = plans[domain.id];
                   if (!plan) return null;
                   const isOpen = openDomains.has(domain.id);
+                  const totalActions = plan.actions.length;
 
                   return (
                     <Collapsible key={domain.id} open={isOpen} onOpenChange={() => toggleDomain(domain.id)}>
@@ -373,113 +472,17 @@ export default function PlanPage() {
                               <ChevronRight className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
                               <span>{domain.icon}</span>
                               {domain.name}
-                              {plan.actions.length > 0 && (
+                              {totalActions > 0 && (
                                 <span className="ml-auto text-xs text-muted-foreground font-normal">
-                                  {plan.actions.length} {plan.actions.length === 1 ? 'acción' : 'acciones'}
+                                  {totalActions} {totalActions === 1 ? 'acción' : 'acciones'}
                                 </span>
                               )}
                             </CardTitle>
                           </CardHeader>
                         </CollapsibleTrigger>
                         <CollapsibleContent>
-                          <CardContent className="space-y-4 pt-0">
-                            <div className="space-y-2">
-                              <div className="flex items-center gap-1.5">
-                                <Label className="text-sm">Meta</Label>
-                                <SMARTGoalTooltip source="rueda" />
-                              </div>
-                              <Input
-                                placeholder="¿Qué quieres lograr en esta área?"
-                                value={plan.goalText}
-                                onChange={(e) =>
-                                  setPlans((prev) => ({
-                                    ...prev,
-                                    [domain.id]: { ...prev[domain.id], goalText: e.target.value },
-                                  }))
-                                }
-                              />
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label className="text-sm">Acciones</Label>
-                              <div className="space-y-2">
-                                {plan.actions.map((action) => {
-                                  const freqLabel = FREQUENCY_OPTIONS.find(f => f.key === action.frequency_type)?.label || 'Semanal';
-                                  return (
-                                    <div key={action.id} className="flex items-start gap-2 group p-2 rounded-md hover:bg-muted/50">
-                                      <Checkbox
-                                        checked={action.completed}
-                                        onCheckedChange={() =>
-                                          handleToggleAction(domain.id, action.id)
-                                        }
-                                        className="mt-0.5"
-                                      />
-                                      <div className="flex-1 min-w-0">
-                                        <span className={`text-sm ${action.completed ? 'line-through text-muted-foreground' : ''}`}>
-                                          {action.text}
-                                        </span>
-                                        <div className="flex gap-2 mt-1 flex-wrap">
-                                          <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 px-1.5 py-0.5 rounded">
-                                            {freqLabel}
-                                          </span>
-                                        </div>
-                                      </div>
-                                      <button
-                                        onClick={() => handleRemoveAction(domain.id, action.id)}
-                                        className="opacity-0 group-hover:opacity-100 transition-opacity"
-                                      >
-                                        <X className="h-3 w-3 text-muted-foreground" />
-                                      </button>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                              <div className="space-y-2 pt-2 border-t border-border">
-                                <Input
-                                  placeholder="Nueva acción..."
-                                  value={newActionText[domain.id] || ''}
-                                  onChange={(e) =>
-                                    setNewActionText((prev) => ({
-                                      ...prev,
-                                      [domain.id]: e.target.value,
-                                    }))
-                                  }
-                                  onKeyDown={(e) =>
-                                    e.key === 'Enter' && handleAddAction(domain.id)
-                                  }
-                                  className="text-sm"
-                                />
-                                <div className="flex gap-2 flex-wrap">
-                                  <Select
-                                    value={newActionFrequency[domain.id] || 'WEEKLY'}
-                                    onValueChange={(val) =>
-                                      setNewActionFrequency((prev) => ({
-                                        ...prev,
-                                        [domain.id]: val as FrequencyType,
-                                      }))
-                                    }
-                                  >
-                                    <SelectTrigger size="sm" className="w-[120px]">
-                                      <SelectValue placeholder="Frecuencia" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {FREQUENCY_OPTIONS.map((opt) => (
-                                        <SelectItem key={opt.key} value={opt.key}>
-                                          {opt.label}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => handleAddAction(domain.id)}
-                                  >
-                                    <Plus className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
+                          <CardContent className="pt-0">
+                            {renderGoalSections(domain.id, plan)}
                           </CardContent>
                         </CollapsibleContent>
                       </Card>

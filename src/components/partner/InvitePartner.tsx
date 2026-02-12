@@ -28,7 +28,7 @@ export function InvitePartner() {
     if (!inviteCode) return;
     await navigator.clipboard.writeText(inviteCode);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setTimeout(() => setCopied(false), 1000);
   };
 
   return (

@@ -212,6 +212,7 @@ export const useWizardStore = create<WizardState>((set) => ({
             wheel_id: state.wheelId!,
             domain_id: domainId,
             goal_text: null,
+            goals: [],
             target_score: null,
             actions: [],
             created_at: new Date().toISOString(),
