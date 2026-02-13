@@ -11,7 +11,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { getAccountsForMonth } from '@/lib/actions/finances-actions';
-import { getUserDomains } from '@/lib/actions/domain-actions';
+import { getActiveWheelDomains } from '@/lib/actions/domain-actions';
 import type { BudgetAccount } from '@/lib/types/finances';
 import type { LifeDomain } from '@/lib/types';
 
@@ -44,7 +44,7 @@ export function FinancesFilters({
       const [year, month] = startDate.split('-').map(Number);
       const [accountsData, domainsData] = await Promise.all([
         getAccountsForMonth(year, month),
-        getUserDomains(),
+        getActiveWheelDomains(),
       ]);
       setAccounts(accountsData);
       setDomains(domainsData);

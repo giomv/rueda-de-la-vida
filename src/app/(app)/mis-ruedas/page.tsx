@@ -7,8 +7,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { RadarChart } from '@/components/wheel/RadarChart';
 import { createClient } from '@/lib/supabase/client';
-import { deleteWheel, duplicateWheel } from '@/lib/actions/wheel-actions';
-import { Plus, MoreVertical, Copy, Trash2, CircleDot } from 'lucide-react';
+import { deleteWheel, duplicateWheel, setActiveWheel } from '@/lib/actions/wheel-actions';
+import { Plus, MoreVertical, Copy, Trash2, CircleDot, Star } from 'lucide-react';
 import type { WheelWithDomains } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 
@@ -40,6 +40,14 @@ export default function MisRuedasPage() {
   const handleDuplicate = async (wheelId: string) => {
     const newWheel = await duplicateWheel(wheelId);
     router.push(`/rueda/${newWheel.id}/dominios`);
+  };
+
+  const handleSetActive = async (wheelId: string) => {
+    // Optimistically update local state
+    setWheels((prev) =>
+      prev.map((w) => ({ ...w, is_active: w.id === wheelId }))
+    );
+    await setActiveWheel(wheelId);
   };
 
   if (loading) {
@@ -83,7 +91,15 @@ export default function MisRuedasPage() {
             <Card key={wheel.id} className="overflow-hidden">
               <CardContent className="p-4">
                 <div className="flex items-start justify-between mb-3">
-                  <div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => !wheel.is_active && handleSetActive(wheel.id)}
+                      className={`shrink-0 ${wheel.is_active ? 'text-yellow-500 cursor-default' : 'text-muted-foreground hover:text-yellow-500 cursor-pointer'} transition-colors`}
+                      title={wheel.is_active ? 'Rueda activa' : 'Establecer como activa'}
+                    >
+                      <Star className="h-5 w-5" fill={wheel.is_active ? 'currentColor' : 'none'} />
+                    </button>
+                    <div>
                     <Link
                       href={`/rueda/${wheel.id}/plan`}
                       className="font-semibold hover:text-primary transition-colors"
@@ -93,6 +109,7 @@ export default function MisRuedasPage() {
                     <p className="text-xs text-muted-foreground">
                       {new Date(wheel.created_at).toLocaleDateString('es')} · {wheel.domains.length} dominios
                     </p>
+                    </div>
                   </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>

@@ -8,12 +8,17 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { CountrySelect } from '@/components/scholarship/CountrySelect';
+import { PhoneInput } from '@/components/scholarship/PhoneInput';
+import { getCountryByCode } from '@/lib/data/countries';
 import type { ScholarshipContent } from '@/lib/types/landing';
 import { Section } from './Section';
 
 interface Props {
   content: ScholarshipContent;
 }
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function ScholarshipSection({ content }: Props) {
   const [formData, setFormData] = useState<Record<string, string>>({});
@@ -32,11 +37,39 @@ export function ScholarshipSection({ content }: Props) {
     setLoading(true);
     setError(null);
 
+    // Client-side email validation
+    if (formData.email && !EMAIL_RE.test(formData.email)) {
+      setError('Por favor ingresa un correo electrónico válido.');
+      setLoading(false);
+      return;
+    }
+
+    // Compose phone: dialCode + number
+    const country = formData.pais
+      ? getCountryByCode(formData.pais)
+      : undefined;
+    const phoneDialCode = country?.dialCode ?? '';
+    const phoneNumber = formData.telefono_numero ?? '';
+    const telefono = phoneDialCode
+      ? `${phoneDialCode} ${phoneNumber}`.trim()
+      : phoneNumber;
+
+    // Resolve country name
+    const paisName = country?.name ?? '';
+
+    // Build payload without internal-only keys
+    const { telefono_codigo, telefono_numero, ...rest } = formData;
+    const payload = {
+      ...rest,
+      telefono,
+      pais: paisName,
+    };
+
     try {
       const res = await fetch('/api/scholarship', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
@@ -51,6 +84,81 @@ export function ScholarshipSection({ content }: Props) {
       );
     } finally {
       setLoading(false);
+    }
+  };
+
+  const renderField = (field: (typeof content.formFields)[number]) => {
+    switch (field.type) {
+      case 'textarea':
+        return (
+          <Textarea
+            id={field.name}
+            name={field.name}
+            required={field.required}
+            value={formData[field.name] || ''}
+            onChange={handleChange}
+            rows={3}
+          />
+        );
+
+      case 'email':
+        return (
+          <Input
+            id={field.name}
+            name={field.name}
+            type="email"
+            required={field.required}
+            placeholder={field.placeholder}
+            value={formData[field.name] || ''}
+            onChange={handleChange}
+          />
+        );
+
+      case 'country-select':
+        return (
+          <CountrySelect
+            value={formData.pais || ''}
+            onValueChange={(code) => {
+              setFormData((prev) => {
+                const next: Record<string, string> = { ...prev, pais: code };
+                // Auto-sync phone country code if empty
+                if (!prev.telefono_codigo) {
+                  next.telefono_codigo = code;
+                }
+                return next;
+              });
+            }}
+            required={field.required}
+          />
+        );
+
+      case 'phone':
+        return (
+          <PhoneInput
+            countryCode={formData.telefono_codigo || ''}
+            phoneNumber={formData.telefono_numero || ''}
+            onCountryCodeChange={(code) =>
+              setFormData((prev) => ({ ...prev, telefono_codigo: code }))
+            }
+            onPhoneNumberChange={(num) =>
+              setFormData((prev) => ({ ...prev, telefono_numero: num }))
+            }
+            required={field.required}
+          />
+        );
+
+      default:
+        return (
+          <Input
+            id={field.name}
+            name={field.name}
+            type={field.type}
+            required={field.required}
+            placeholder={field.placeholder}
+            value={formData[field.name] || ''}
+            onChange={handleChange}
+          />
+        );
     }
   };
 
@@ -155,25 +263,7 @@ export function ScholarshipSection({ content }: Props) {
                 {content.formFields.map((field) => (
                   <div key={field.name} className="space-y-1.5">
                     <Label htmlFor={field.name}>{field.label}</Label>
-                    {field.type === 'textarea' ? (
-                      <Textarea
-                        id={field.name}
-                        name={field.name}
-                        required={field.required}
-                        value={formData[field.name] || ''}
-                        onChange={handleChange}
-                        rows={3}
-                      />
-                    ) : (
-                      <Input
-                        id={field.name}
-                        name={field.name}
-                        type={field.type}
-                        required={field.required}
-                        value={formData[field.name] || ''}
-                        onChange={handleChange}
-                      />
-                    )}
+                    {renderField(field)}
                   </div>
                 ))}
 

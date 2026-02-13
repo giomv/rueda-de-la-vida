@@ -1329,7 +1329,7 @@ function normalizeToSlug(name: string): string {
 }
 
 /**
- * Get the most recent wheel with priorities set
+ * Get the active wheel's priorities (or fall back to most recent wheel with priorities)
  */
 async function getActiveWheelPriorities(): Promise<{
   wheelId: string;
@@ -1339,12 +1339,11 @@ async function getActiveWheelPriorities(): Promise<{
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  // Get the most recent wheel with priorities
-  const { data: wheels } = await supabase
+  // Try the active wheel first
+  const { data: activeWheel } = await supabase
     .from('wheels')
     .select(`
       id,
-      created_at,
       priorities(
         id,
         rank,
@@ -1352,10 +1351,28 @@ async function getActiveWheelPriorities(): Promise<{
       )
     `)
     .eq('user_id', user.id)
-    .order('created_at', { ascending: false });
+    .eq('is_active', true)
+    .single();
 
-  // Find first wheel that has priorities
-  const wheelWithPriorities = wheels?.find(w => w.priorities && w.priorities.length > 0);
+  // If active wheel has priorities, use it; otherwise fall back to most recent
+  let wheelWithPriorities = activeWheel?.priorities?.length ? activeWheel : null;
+
+  if (!wheelWithPriorities) {
+    const { data: wheels } = await supabase
+      .from('wheels')
+      .select(`
+        id,
+        priorities(
+          id,
+          rank,
+          domain:domains(name)
+        )
+      `)
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    wheelWithPriorities = wheels?.find(w => w.priorities && w.priorities.length > 0) || null;
+  }
 
   if (!wheelWithPriorities) return null;
 

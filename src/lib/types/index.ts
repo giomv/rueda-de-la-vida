@@ -14,6 +14,7 @@ export interface Wheel {
   mode: 'individual' | 'pareja' | 'compartida';
   is_guest: boolean;
   guest_token: string | null;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 }

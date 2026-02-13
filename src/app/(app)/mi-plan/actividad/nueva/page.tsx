@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation';
 import { ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ActivityForm } from '@/components/lifeplan';
-import { createClient } from '@/lib/supabase/client';
 import { syncLifePlanActivities } from '@/lib/actions/import-actions';
 import { getGoalsWithYears } from '@/lib/actions/dashboard-actions';
+import { getActiveWheelDomains } from '@/lib/actions/domain-actions';
 import type { LifeDomain } from '@/lib/types';
 import type { GoalWithYear } from '@/lib/types/dashboard';
 
@@ -19,33 +19,22 @@ export default function NuevaActividadPage() {
 
   useEffect(() => {
     async function loadData() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        router.push('/iniciar-sesion');
-        return;
-      }
-
       // Sync goals from wheel and odyssey before loading
       await syncLifePlanActivities();
 
       // Fetch domains and goals with year information in parallel
-      const [{ data: domainsData }, goalsResponse] = await Promise.all([
-        supabase
-          .from('life_domains')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('order_position'),
+      const [domainsData, goalsResponse] = await Promise.all([
+        getActiveWheelDomains(),
         getGoalsWithYears(),
       ]);
 
-      setDomains(domainsData || []);
+      setDomains(domainsData);
       setGoals(goalsResponse.goals);
       setLoading(false);
     }
 
     loadData();
-  }, [router]);
+  }, []);
 
   if (loading) {
     return (

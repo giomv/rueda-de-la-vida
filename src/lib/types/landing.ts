@@ -167,8 +167,9 @@ export interface FinalCtaContent {
 export interface ScholarshipFormField {
   name: string;
   label: string;
-  type: 'text' | 'number' | 'textarea';
+  type: 'text' | 'number' | 'email' | 'textarea' | 'country-select' | 'phone';
   required: boolean;
+  placeholder?: string;
 }
 
 export interface ScholarshipImage {

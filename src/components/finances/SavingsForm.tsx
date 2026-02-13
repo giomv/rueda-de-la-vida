@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/select';
 import { getSavingsAccountsForMonth } from '@/lib/actions/finances-actions';
 import { createSavingsMovement, updateSavingsMovement } from '@/lib/actions/savings-actions';
-import { getUserDomains } from '@/lib/actions/domain-actions';
+import { getActiveWheelDomains } from '@/lib/actions/domain-actions';
 import type { BudgetAccount } from '@/lib/types/finances';
 import type { LifeDomain } from '@/lib/types';
 import type { SavingsMovement } from '@/lib/types/dashboard';
@@ -47,7 +47,7 @@ export function SavingsForm({ savings, onSuccess }: SavingsFormProps) {
       const [year, month] = date.split('-').map(Number);
       const [accountsData, domainsData] = await Promise.all([
         getSavingsAccountsForMonth(year, month),
-        getUserDomains(),
+        getActiveWheelDomains(),
       ]);
       setAccounts(accountsData);
       setDomains(domainsData);

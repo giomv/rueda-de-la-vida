@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { createExpense, updateExpense, getAccountsForMonth } from '@/lib/actions/finances-actions';
-import { getUserDomains } from '@/lib/actions/domain-actions';
+import { getActiveWheelDomains } from '@/lib/actions/domain-actions';
 import type { BudgetAccount, Expense } from '@/lib/types/finances';
 import type { LifeDomain } from '@/lib/types';
 
@@ -45,7 +45,7 @@ export function ExpenseForm({ expense, onSuccess }: ExpenseFormProps) {
       const [year, month] = date.split('-').map(Number);
       const [accountsData, domainsData] = await Promise.all([
         getAccountsForMonth(year, month),
-        getUserDomains(),
+        getActiveWheelDomains(),
       ]);
       setAccounts(accountsData);
       setDomains(domainsData);

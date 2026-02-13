@@ -367,10 +367,14 @@ export const landingContent: LandingContent = {
     processIntro: 'Cada mes se abren 2 cupos.',
     formFields: [
       { name: 'nombre', label: 'Nombre y Apellido', type: 'text', required: true },
+      { name: 'email', label: 'Correo electrónico', type: 'email', required: true, placeholder: 'tu@correo.com' },
       { name: 'edad', label: 'Edad', type: 'number', required: true },
       { name: 'centro', label: 'Centro de estudios', type: 'text', required: true },
+      { name: 'telefono', label: 'Teléfono', type: 'phone', required: true },
       { name: 'carrera', label: 'Carrera', type: 'text', required: true },
       { name: 'ubicacion', label: 'País y Ciudad', type: 'text', required: true },
+      { name: 'pais', label: 'País', type: 'country-select', required: true },
+      { name: 'ciudad', label: 'Ciudad', type: 'text', required: true, placeholder: 'Tu ciudad' },
       {
         name: 'construyendo',
         label: '¿Qué estás intentando construir actualmente?',

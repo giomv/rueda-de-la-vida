@@ -8,7 +8,7 @@ import { ActivityForm } from '@/components/lifeplan';
 import { getActivity, deleteActivity } from '@/lib/actions/lifeplan-actions';
 import { syncLifePlanActivities } from '@/lib/actions/import-actions';
 import { getGoalsWithYears } from '@/lib/actions/dashboard-actions';
-import { createClient } from '@/lib/supabase/client';
+import { getActiveWheelDomains } from '@/lib/actions/domain-actions';
 import type { LifePlanActivity } from '@/lib/types/lifeplan';
 import type { LifeDomain } from '@/lib/types';
 import type { GoalWithYear } from '@/lib/types/dashboard';
@@ -26,29 +26,18 @@ export default function EditActivityPage() {
 
   useEffect(() => {
     async function loadData() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        router.push('/iniciar-sesion');
-        return;
-      }
-
       try {
         // Sync goals from wheel and odyssey before loading
         await syncLifePlanActivities();
 
-        const [activityData, { data: domainsData }, goalsResponse] = await Promise.all([
+        const [activityData, domainsData, goalsResponse] = await Promise.all([
           getActivity(activityId),
-          supabase
-            .from('life_domains')
-            .select('*')
-            .eq('user_id', user.id)
-            .order('order_position'),
+          getActiveWheelDomains(),
           getGoalsWithYears(),
         ]);
 
         setActivity(activityData);
-        setDomains(domainsData || []);
+        setDomains(domainsData);
         setGoals(goalsResponse.goals);
       } catch (error) {
         console.error('Error loading activity:', error);

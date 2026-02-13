@@ -16,7 +16,7 @@ import { useOdysseyStore } from '@/lib/stores/odyssey-store';
 import { useOdysseyAutoSave } from '@/hooks/use-odyssey-auto-save';
 import { getOdysseyData } from '@/lib/actions/odyssey-actions';
 import { savePlanHeadline, saveMilestones, savePlanDashboard, saveFeedback, updateOdyssey } from '@/lib/actions/odyssey-actions';
-import { getOrCreateDomains } from '@/lib/actions/domain-actions';
+import { getActiveWheelDomains } from '@/lib/actions/domain-actions';
 import { getUserWheelsForOdyssey, importWheelGoalsToOdyssey, getOdysseyGoals, assignGoalToYear, unassignGoal } from '@/lib/actions/odyssey-goal-actions';
 import { PLAN_TYPES, INSPIRE_PROMPTS } from '@/lib/types';
 import type { MilestoneCategory, MilestoneTag, Wheel, GoalWithAssignment } from '@/lib/types';
@@ -51,7 +51,7 @@ export default function Plan1Page() {
     async function load() {
       const [data, userDomains, userWheels] = await Promise.all([
         getOdysseyData(odysseyId),
-        getOrCreateDomains(),
+        getActiveWheelDomains(),
         getUserWheelsForOdyssey(),
       ]);
       setOdysseyId(odysseyId);

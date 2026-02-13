@@ -15,7 +15,7 @@ import {
   getOdysseyData, createPrototype, savePrototypeSteps, savePrototypeActions, updatePrototypeMilestone,
 } from '@/lib/actions/odyssey-actions';
 import { importActionsFromOdyssey, importFromOdyssey } from '@/lib/actions/import-actions';
-import { getOrCreateDomains } from '@/lib/actions/domain-actions';
+import { getActiveWheelDomains } from '@/lib/actions/domain-actions';
 import { FREQUENCY_OPTIONS } from '@/lib/types';
 import type { PrototypeStepType, OdysseyMilestone, OdysseyPrototypeStep, OdysseyPrototypeAction, FrequencyType } from '@/lib/types';
 
@@ -91,7 +91,7 @@ export default function PrototipoPage() {
     async function load() {
       const [data, userDomains] = await Promise.all([
         getOdysseyData(odysseyId),
-        getOrCreateDomains(),
+        getActiveWheelDomains(),
       ]);
       setOdysseyId(odysseyId);
       setDomains(userDomains);

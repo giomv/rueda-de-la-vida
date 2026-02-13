@@ -194,6 +194,56 @@ export async function getOrCreateDomains(): Promise<LifeDomain[]> {
   return domains;
 }
 
+// --- Get life_domains filtered by active wheel domains ---
+export async function getActiveWheelDomains(): Promise<LifeDomain[]> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('No autenticado');
+
+  // Get the active wheel
+  const { data: activeWheel } = await supabase
+    .from('wheels')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('is_active', true)
+    .single();
+
+  if (!activeWheel) {
+    // No active wheel — fall back to all user domains
+    return getUserDomains();
+  }
+
+  // Get wheel domains
+  const { data: wheelDomains } = await supabase
+    .from('domains')
+    .select('name')
+    .eq('wheel_id', activeWheel.id)
+    .order('order_position');
+
+  if (!wheelDomains || wheelDomains.length === 0) {
+    return getUserDomains();
+  }
+
+  // Compute slugs from wheel domain names
+  const wheelSlugs = wheelDomains.map(d => normalizeToSlug(d.name));
+
+  // Get life_domains filtered by those slugs
+  const { data: lifeDomains, error } = await supabase
+    .from('life_domains')
+    .select('*')
+    .eq('user_id', user.id)
+    .in('slug', wheelSlugs)
+    .order('order_position');
+
+  if (error) throw new Error(error.message);
+
+  if (!lifeDomains || lifeDomains.length === 0) {
+    return getUserDomains();
+  }
+
+  return lifeDomains;
+}
+
 // --- Find domain by slug (for fuzzy matching) ---
 export async function findDomainBySlug(slug: string): Promise<LifeDomain | null> {
   const supabase = await createClient();
