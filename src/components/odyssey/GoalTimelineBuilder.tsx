@@ -88,7 +88,6 @@ export function GoalTimelineBuilder({
 
       {/* Year columns */}
       <div className="mt-6">
-        <h3 className="text-sm font-semibold mb-3">Metas asignadas por ano</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           {years.map((year) => (
             <GoalYearColumn

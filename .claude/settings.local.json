@@ -14,7 +14,9 @@
       "Bash(npx eslint:*)",
       "Bash(grep:*)",
       "Bash(npm run lint:*)",
-      "Bash(npx supabase db push:*)"
+      "Bash(npx supabase db push:*)",
+      "Bash(find:*)",
+      "WebFetch(domain:www.onemedical.com)"
     ]
   },
   "hooks": {

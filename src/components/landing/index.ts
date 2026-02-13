@@ -7,6 +7,7 @@ export { WhoItsForSection } from './WhoItsForSection';
 export { TestimonialList } from './TestimonialList';
 export { PricingCards } from './PricingCards';
 export { FounderSection } from './FounderSection';
+export { FounderClosingSection } from './FounderClosingSection';
 export { OutcomesSection } from './OutcomesSection';
 export { FaqSection } from './FaqSection';
 export { FinalCtaSection } from './FinalCtaSection';

@@ -7,7 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Plus, Pencil, Check } from 'lucide-react';
 import { MilestoneCard } from './MilestoneCard';
 import { MilestoneForm } from './MilestoneForm';
+import { DraggableGoalCard } from './DraggableGoalCard';
 import type { OdysseyMilestone, MilestoneCategory, MilestoneTag, LifeDomain } from '@/lib/types';
+import type { GoalWithAssignment } from '@/lib/types/odyssey';
 import { cn } from '@/lib/utils';
 
 interface YearColumnProps {
@@ -20,9 +22,12 @@ interface YearColumnProps {
   onYearNameChange?: (year: number, name: string) => void;
   showTags?: boolean;
   domains?: LifeDomain[];
+  goals?: GoalWithAssignment[];
+  onEditGoal?: (goalId: string) => void;
+  onUnassignGoal?: (goalId: string) => void;
 }
 
-export function YearColumn({ year, yearName, milestones, onAdd, onEdit, onDelete, onYearNameChange, showTags = false, domains = [] }: YearColumnProps) {
+export function YearColumn({ year, yearName, milestones, onAdd, onEdit, onDelete, onYearNameChange, showTags = false, domains = [], goals, onEditGoal, onUnassignGoal }: YearColumnProps) {
   const [showForm, setShowForm] = useState(false);
   const [editingMilestone, setEditingMilestone] = useState<OdysseyMilestone | null>(null);
   const [editingName, setEditingName] = useState(false);
@@ -89,6 +94,15 @@ export function YearColumn({ year, yearName, milestones, onAdd, onEdit, onDelete
           isOver && 'bg-primary/10 ring-2 ring-primary/30'
         )}
       >
+        {goals && goals.map((item) => (
+          <DraggableGoalCard
+            key={item.goal.id}
+            item={item}
+            onEdit={onEditGoal}
+            onUnassign={onUnassignGoal}
+            showUnassign
+          />
+        ))}
         {milestones.map((milestone) => (
           <MilestoneCard
             key={milestone.id}
@@ -98,7 +112,7 @@ export function YearColumn({ year, yearName, milestones, onAdd, onEdit, onDelete
             domains={domains}
           />
         ))}
-        {milestones.length === 0 && (
+        {milestones.length === 0 && (!goals || goals.length === 0) && (
           <div className={cn(
             'border border-dashed rounded-lg p-4 text-center transition-colors',
             isOver && 'border-primary bg-primary/5'

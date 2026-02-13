@@ -104,7 +104,7 @@ export interface ImportSources {
 export interface CreateActivityInput {
   title: string;
   notes?: string;
-  domain_id?: string | null;
+  domain_id: string;
   goal_id?: string | null;
   frequency_type: FrequencyType;
   frequency_value?: number;

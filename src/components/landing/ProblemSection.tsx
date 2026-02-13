@@ -15,6 +15,14 @@ export function ProblemSection({ content }: Props) {
           {content.title}
         </h2>
 
+        <div className="space-y-3 text-center max-w-md mx-auto mb-8">
+          {content.painPoints.map((point) => (
+            <p key={point} className="text-muted-foreground text-sm">
+              {point}
+            </p>
+          ))}
+        </div>
+
         <div className="space-y-1 mb-8">
           {content.negations.map((line) => (
             <p key={line} className="text-muted-foreground">
@@ -25,18 +33,6 @@ export function ProblemSection({ content }: Props) {
             {content.revelation}
           </p>
         </div>
-
-        <ul className="space-y-3 text-left max-w-md mx-auto mb-8">
-          {content.painPoints.map((point) => (
-            <li
-              key={point}
-              className="flex items-start gap-2 text-muted-foreground text-sm"
-            >
-              <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-muted-foreground/50 shrink-0" />
-              {point}
-            </li>
-          ))}
-        </ul>
 
         <p className="font-semibold text-lg">{content.close}</p>
       </div>

@@ -25,7 +25,7 @@ export function GoalYearColumn({
     data: { year, type: 'year' },
   });
 
-  const displayName = yearName || `Ano ${year}`;
+  const displayName = yearName || `Año ${year}`;
 
   return (
     <div className="space-y-2">

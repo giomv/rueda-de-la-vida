@@ -13,7 +13,6 @@ import { FeedbackList } from '@/components/odyssey/FeedbackList';
 import { DashboardSliders } from '@/components/odyssey/DashboardSliders';
 import { ExcitementConcern } from '@/components/odyssey/ExcitementConcern';
 import { WheelSelector } from '@/components/odyssey/WheelSelector';
-import { GoalTimelineBuilder } from '@/components/odyssey/GoalTimelineBuilder';
 import { useOdysseyStore } from '@/lib/stores/odyssey-store';
 import { useOdysseyAutoSave } from '@/hooks/use-odyssey-auto-save';
 import { getOdysseyData, savePlanHeadline, saveMilestones, savePlanDashboard, saveFeedback, updateOdyssey, duplicatePlan } from '@/lib/actions/odyssey-actions';
@@ -261,7 +260,7 @@ export default function Plan2Page() {
           <div>
             <h2 className="text-sm font-semibold mb-2">Metas de tu Rueda de la Vida</h2>
             <p className="text-xs text-muted-foreground mb-3">
-              Selecciona una rueda para importar sus metas y asignarlas a cada ano de tu plan
+              Selecciona una rueda para importar sus metas y asignarlas a cada año de tu plan
             </p>
             <WheelSelector
               wheels={wheels}
@@ -271,20 +270,11 @@ export default function Plan2Page() {
             />
           </div>
 
-          {selectedWheelId && (
-            <GoalTimelineBuilder
-              unassignedGoals={odysseyGoals.unassigned}
-              goalsByYear={odysseyGoals.byYear}
-              yearNames={plan?.year_names || {}}
-              onAssignGoal={handleAssignGoal}
-              onUnassignGoal={handleUnassignGoal}
-              onEditGoal={handleEditGoal}
-            />
-          )}
         </div>
 
-        <div>
-          <h2 className="text-sm font-semibold mb-3">Metas a 5 anos</h2>
+        <div className="space-y-4">
+          <h2 className="text-sm font-semibold mb-3">Metas a 5 años</h2>
+
           <TimelineBuilder
             milestones={planMilestones}
             yearNames={plan?.year_names || {}}
@@ -294,6 +284,11 @@ export default function Plan2Page() {
             onYearNameChange={handleYearNameChange}
             onMoveMilestone={handleMoveMilestone}
             domains={domains}
+            unassignedGoals={selectedWheelId ? odysseyGoals.unassigned : undefined}
+            goalsByYear={selectedWheelId ? odysseyGoals.byYear : undefined}
+            onAssignGoal={handleAssignGoal}
+            onUnassignGoal={handleUnassignGoal}
+            onEditGoal={handleEditGoal}
           />
         </div>
 

@@ -58,7 +58,7 @@ export const landingContent: LandingContent = {
   /* ---- THREE DIMENSIONS + FINANCE ---- */
   dimensions: {
     id: 'dimensiones',
-    title: 'Una plataforma. Tres dimensiones. Una vida coherente.',
+    title: 'Una plataforma. Cuatro dimensiones. Una vida coherente.',
     cards: [
       {
         id: 'diagnostico',
@@ -66,6 +66,7 @@ export const landingContent: LandingContent = {
         description:
           'Evalúa cómo estás en cada dominio importante y define qué necesita tu atención ahora.',
         footer: 'No desde la culpa. Desde la conciencia.',
+        image: { src: '/assets/landing/dimensiones/diagnostico.png', alt: 'Diagnóstico — VIA' },
       },
       {
         id: 'estrategia',
@@ -73,6 +74,7 @@ export const landingContent: LandingContent = {
         description:
           'Organiza tus metas por años y horizonte. Transforma intención en estrategia.\nDecide qué construir y cuándo.',
         footer: 'Porque no todo es urgente. Pero sí importante.',
+        image: { src: '/assets/landing/dimensiones/estrategia.png', alt: 'Estrategia — VIA' },
       },
       {
         id: 'ejecucion',
@@ -81,6 +83,7 @@ export const landingContent: LandingContent = {
           'Baja todo a acciones reales. Día a día. Semana a semana.',
         footer:
           'Las acciones no están sueltas. Conecta cada acción con una intención mayor.',
+        image: { src: '/assets/landing/dimensiones/ejecucion.png', alt: 'Ejecución — VIA' },
       },
     ],
     finance: {
@@ -90,6 +93,7 @@ export const landingContent: LandingContent = {
         'Alinea tus decisiones financieras con la vida que estás construyendo',
       description:
         'El dinero deja de ser solo gasto. Se convierte en herramienta de diseño.',
+      image: { src: '/assets/landing/dimensiones/finanzas.png', alt: 'Finanzas con propósito — VIA' },
     },
   },
 
@@ -127,9 +131,9 @@ export const landingContent: LandingContent = {
     intro: 'VIA es para profesionales que:',
     bullets: [
       'Valoran estructura sin rigidez.',
-      'Estás en transición, crecimiento o redefinición.',
+      'Están en transición, crecimiento o redefinición.',
       'Quieren expansión con equilibrio.',
-      'Buscas coherencia entre lo que piensas, haces y cómo inviertes tu dinero.',
+      'Buscan coherencia entre lo que piensan, hacen y cómo invierten su dinero.',
       'No buscan motivación momentánea, sino dirección sostenida.',
     ],
   },
@@ -140,10 +144,10 @@ export const landingContent: LandingContent = {
     title: 'Testimoniales',
     items: [
       {
-        quote: 'Por primera vez siento que todo está conectado.',
-        body: 'Antes tenía metas por todos lados. Con VIA entendí qué es foco real. Ahora sé en qué estoy trabajando y por qué.',
-        author: 'Mariana R.',
-        role: 'consultora estratégica',
+        quote: 'No sabía cuánto lo necesitaba hasta que lo usé',
+        body: 'Si bien soy una persona organizada, paso mucho tiempo en mi mente y Via me ayudó a darme cuenta las oportunidades que puedo tomar.',
+        author: 'Denisse G.',
+        role: 'Gerente de producto y empresaria.',
       },
       {
         quote: 'Me dio estructura sin quitarme libertad.',
@@ -227,18 +231,31 @@ export const landingContent: LandingContent = {
     paragraphs: [
       'VIA no nació como una app de productividad.',
       'Nació desde una pregunta más profunda:\n¿Cómo se diseña una vida con coherencia real?',
-      'Soy estratega, profesora universitaria y desarrolladora de sistemas. Pero también soy Maestra en Psicología de la Salud y Estilos de Vida.',
+      'Soy coach profesional, profesora universitaria y desarrolladora de productos digitales. Pero también soy especialista y master en Psicología de la Salud y Estilos de Vida',
     ],
     listTitle: 'Durante años he trabajado en:',
     listItems: [
       'Diseño estratégico',
       'Desarrollo de productos',
       'Arquitectura de sistemas digitales',
-      'Formación universitaria',
+      'Coaching ontologico y pragmático',
       'Y estudio del comportamiento humano aplicado al cambio sostenible',
     ],
-    understandingTitle: 'Es comprensión de cómo funcionan:',
-    understandingItems: [
+    closing: [
+      'VIA integra esos mundos.',
+      'No es solo organización.',
+    ],
+    image: {
+      src: '/assets/landing/founder.jpeg',
+      alt: 'Creadora de VIA',
+    },
+  },
+
+  /* ---- FOUNDER CLOSING ---- */
+  founderClosing: {
+    id: 'creadora-cierre',
+    title: 'Es comprensión de cómo funcionan:',
+    items: [
       'Los hábitos',
       'La motivación',
       'La toma de decisiones',
@@ -246,11 +263,9 @@ export const landingContent: LandingContent = {
       'El equilibrio entre dominios de vida',
     ],
     closing: [
-      'VIA integra esos mundos.',
-      'No es solo organización.',
       'Fue creado para personas que no quieren reaccionar ante la vida, sino liderarla.',
-      'Porque el crecimiento serio no se improvisa.\nSe diseña.',
-      'VIA fue diseñado para resolver eso.',
+      'Porque el crecimiento serio no se improvisa. Se diseña.',
+      'VIA fue diseñado para acompañarte en este proceso.',
     ],
   },
 
@@ -322,12 +337,10 @@ export const landingContent: LandingContent = {
   scholarship: {
     id: 'becas',
     title: 'Programa de Becas VIA',
-    subtitle: 'Arquitectas del Futuro',
+    subtitle: 'Por más mujeres diseñando sus vidas con proposito.',
     intro: [
-      'Creo profundamente que la claridad estratégica no debería depender únicamente de recursos económicos.',
-      'Por eso, VIA destina 3 becas completas mensuales para universitarias que quieran diseñar su vida con intención y estructura real.',
-      'No es un descuento.',
-      'Es una selección.',
+      'La claridad estratégica no debería depender de las circunstancias. Creemos en la igualdad de oportunidades para pensar en grande, decidir con criterio y construir con coherencia.',
+      'Por eso, VIA otorga 2 becas completas cada mes a universitarias que estén listas para liderar su propio camino con intención y visión.',
     ],
     includesTitle: '¿Qué incluye la beca?',
     includes: [
@@ -338,6 +351,10 @@ export const landingContent: LandingContent = {
     ],
     includesNote:
       'La experiencia es exactamente la misma que la modalidad premium.',
+    includeImage: {
+      src: '/assets/landing/becas.png',
+      alt: 'Programa de Becas VIA',
+    },
     audienceTitle: '¿A quién está dirigido?',
     audienceIntro: 'Universitarias que:',
     audienceBullets: [
@@ -349,11 +366,11 @@ export const landingContent: LandingContent = {
     processTitle: 'Proceso de selección',
     processIntro: 'Cada mes se abren 2 cupos.',
     formFields: [
-      { name: 'nombre', label: 'Nombre y apellido', type: 'text', required: true },
+      { name: 'nombre', label: 'Nombre y Apellido', type: 'text', required: true },
       { name: 'edad', label: 'Edad', type: 'number', required: true },
       { name: 'centro', label: 'Centro de estudios', type: 'text', required: true },
       { name: 'carrera', label: 'Carrera', type: 'text', required: true },
-      { name: 'ubicacion', label: 'País y ciudad', type: 'text', required: true },
+      { name: 'ubicacion', label: 'País y Ciudad', type: 'text', required: true },
       {
         name: 'construyendo',
         label: '¿Qué estás intentando construir actualmente?',

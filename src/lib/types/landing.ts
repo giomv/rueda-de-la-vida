@@ -28,11 +28,19 @@ export interface ProblemContent {
   close: string;
 }
 
+export interface DimensionCardImage {
+  src: string;
+  alt: string;
+  aspectRatio?: string;
+  fit?: 'contain' | 'cover';
+}
+
 export interface DimensionCard {
   id: string;
   title: string;
   description: string;
   footer: string;
+  image?: DimensionCardImage;
 }
 
 export interface FinanceCallout {
@@ -40,6 +48,7 @@ export interface FinanceCallout {
   title: string;
   subtitle: string;
   description: string;
+  image?: DimensionCardImage;
 }
 
 export interface DimensionsContent {
@@ -109,14 +118,25 @@ export interface PricingContent {
   cards: PricingCard[];
 }
 
+export interface FounderImage {
+  src: string;
+  alt: string;
+}
+
 export interface FounderContent {
   id: string;
   title: string;
   paragraphs: string[];
   listTitle: string;
   listItems: string[];
-  understandingTitle: string;
-  understandingItems: string[];
+  closing: string[];
+  image?: FounderImage;
+}
+
+export interface FounderClosingContent {
+  id: string;
+  title: string;
+  items: string[];
   closing: string[];
 }
 
@@ -151,6 +171,13 @@ export interface ScholarshipFormField {
   required: boolean;
 }
 
+export interface ScholarshipImage {
+  src: string;
+  alt: string;
+  aspectRatio?: string;
+  fit?: 'contain' | 'cover';
+}
+
 export interface ScholarshipContent {
   id: string;
   title: string;
@@ -159,6 +186,7 @@ export interface ScholarshipContent {
   includesTitle: string;
   includes: string[];
   includesNote: string;
+  includeImage?: ScholarshipImage;
   audienceTitle: string;
   audienceIntro: string;
   audienceBullets: string[];
@@ -179,6 +207,7 @@ export interface LandingContent {
   testimonials: TestimonialsContent;
   pricing: PricingContent;
   founder: FounderContent;
+  founderClosing: FounderClosingContent;
   outcomes: OutcomesContent;
   faq: FaqContent;
   finalCta: FinalCtaContent;

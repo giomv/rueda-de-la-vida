@@ -127,6 +127,11 @@ export function ActivityForm({
       return;
     }
 
+    if (!domainId) {
+      setError('Selecciona un dominio para continuar.');
+      return;
+    }
+
     setIsSaving(true);
     setError(null);
 
@@ -165,6 +170,19 @@ export function ActivityForm({
       router.back();
     }
   };
+
+  if (domains.length === 0) {
+    return (
+      <div className="p-6 text-center space-y-3">
+        <p className="text-muted-foreground">
+          No tienes dominios de vida configurados. Configura tus dominios primero para poder crear acciones.
+        </p>
+        <Button type="button" onClick={() => router.push('/mi-plan/configuracion')}>
+          Configurar dominios
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className={cn('space-y-6', className)}>
@@ -211,16 +229,15 @@ export function ActivityForm({
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label>Dominio de vida (opcional)</Label>
+            <Label>Dominio de vida *</Label>
             <Select
-              value={domainId || 'none'}
-              onValueChange={(value) => setDomainId(value === 'none' ? null : value)}
+              value={domainId || ''}
+              onValueChange={(value) => setDomainId(value || null)}
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar dominio" />
+              <SelectTrigger className={cn(!domainId && 'border-destructive')}>
+                <SelectValue placeholder="Selecciona un dominio" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">Sin dominio</SelectItem>
                 {domains.map((domain) => (
                   <SelectItem key={domain.id} value={domain.id}>
                     {domain.icon && <span className="mr-2">{domain.icon}</span>}
@@ -229,6 +246,9 @@ export function ActivityForm({
                 ))}
               </SelectContent>
             </Select>
+            {!domainId && (
+              <p className="text-xs text-destructive">Selecciona un dominio para continuar.</p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -292,7 +312,7 @@ export function ActivityForm({
         >
           Cancelar
         </Button>
-        <Button type="submit" disabled={isSaving} className="flex-1">
+        <Button type="submit" disabled={isSaving || !domainId} className="flex-1">
           {isSaving ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Crear acción'}
         </Button>
       </div>

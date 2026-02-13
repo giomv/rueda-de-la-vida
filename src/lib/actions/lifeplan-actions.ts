@@ -152,6 +152,22 @@ export async function createActivity(input: CreateActivityInput) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('No autenticado');
 
+  if (!input.domain_id) {
+    throw new Error('Selecciona un dominio para continuar.');
+  }
+
+  // Validate domain belongs to this user
+  const { data: domain } = await supabase
+    .from('life_domains')
+    .select('id')
+    .eq('id', input.domain_id)
+    .eq('user_id', user.id)
+    .single();
+
+  if (!domain) {
+    throw new Error('El dominio seleccionado no es válido.');
+  }
+
   // Get max order position
   const { data: maxOrder } = await supabase
     .from('lifeplan_activities')
@@ -167,7 +183,7 @@ export async function createActivity(input: CreateActivityInput) {
       user_id: user.id,
       title: input.title,
       notes: input.notes || null,
-      domain_id: input.domain_id || null,
+      domain_id: input.domain_id,
       goal_id: input.goal_id || null,
       frequency_type: input.frequency_type,
       frequency_value: input.frequency_value || 1,
@@ -188,6 +204,25 @@ export async function updateActivity(activityId: string, input: UpdateActivityIn
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('No autenticado');
+
+  // Reject clearing domain_id
+  if (input.domain_id === null || input.domain_id === '') {
+    throw new Error('Selecciona un dominio para continuar.');
+  }
+
+  // If domain_id provided, validate it belongs to user
+  if (input.domain_id) {
+    const { data: domain } = await supabase
+      .from('life_domains')
+      .select('id')
+      .eq('id', input.domain_id)
+      .eq('user_id', user.id)
+      .single();
+
+    if (!domain) {
+      throw new Error('El dominio seleccionado no es válido.');
+    }
+  }
 
   const updates: Record<string, unknown> = {};
   if (input.title !== undefined) updates.title = input.title;

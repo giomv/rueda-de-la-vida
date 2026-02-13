@@ -187,19 +187,22 @@ describe('LifePlan Constants', () => {
 });
 
 describe('CreateActivityInput validation', () => {
-  it('should require title', () => {
+  it('should require title and domain_id', () => {
     const validInput: CreateActivityInput = {
       title: 'Test activity',
+      domain_id: 'domain-123',
       frequency_type: 'DAILY',
     };
 
     expect(validInput.title).toBeDefined();
     expect(validInput.title.length).toBeGreaterThan(0);
+    expect(validInput.domain_id).toBeDefined();
   });
 
   it('should require frequency_type', () => {
     const validInput: CreateActivityInput = {
       title: 'Test activity',
+      domain_id: 'domain-123',
       frequency_type: 'WEEKLY',
     };
 

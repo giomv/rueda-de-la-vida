@@ -11,6 +11,7 @@ import {
   TestimonialList,
   PricingCards,
   FounderSection,
+  FounderClosingSection,
   OutcomesSection,
   FaqSection,
   FinalCtaSection,
@@ -32,6 +33,7 @@ export default function LandingPage() {
       <TestimonialList content={c.testimonials} />
       <PricingCards content={c.pricing} />
       <FounderSection content={c.founder} />
+      <FounderClosingSection content={c.founderClosing} />
       <OutcomesSection content={c.outcomes} />
       <FaqSection content={c.faq} />
       <FinalCtaSection content={c.finalCta} />

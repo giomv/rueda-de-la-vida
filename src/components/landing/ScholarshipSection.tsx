@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -64,7 +65,7 @@ export function ScholarshipSection({ content }: Props) {
         </p>
       </div>
 
-      <div className="max-w-2xl mx-auto space-y-8">
+      <div className={`${content.includeImage ? 'max-w-4xl' : 'max-w-2xl'} mx-auto space-y-8`}>
         {/* Intro */}
         <div className="space-y-3">
           {content.intro.map((line, i) => (
@@ -79,36 +80,57 @@ export function ScholarshipSection({ content }: Props) {
           ))}
         </div>
 
-        {/* What's included */}
-        <div>
-          <h3 className="font-semibold mb-3">{content.includesTitle}</h3>
-          <ul className="space-y-2">
-            {content.includes.map((item) => (
-              <li key={item} className="flex items-start gap-2 text-sm">
-                <Check className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                {item}
-              </li>
-            ))}
-          </ul>
-          <p className="text-xs text-muted-foreground italic mt-3">
-            {content.includesNote}
-          </p>
-        </div>
+        {/* What's included + Audience (with optional side image) */}
+        <div className={content.includeImage ? 'flex flex-col md:flex-row items-start gap-10 md:gap-14' : 'space-y-8'}>
+          {/* Text side */}
+          <div className="flex-1 space-y-8">
+            {/* What's included */}
+            <div>
+              <h3 className="font-semibold mb-3">{content.includesTitle}</h3>
+              <ul className="space-y-2">
+                {content.includes.map((item) => (
+                  <li key={item} className="flex items-start gap-2 text-sm">
+                    <Check className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <p className="text-xs text-muted-foreground italic mt-3">
+                {content.includesNote}
+              </p>
+            </div>
 
-        {/* Audience */}
-        <div>
-          <h3 className="font-semibold mb-2">{content.audienceTitle}</h3>
-          <p className="text-sm text-muted-foreground mb-3">
-            {content.audienceIntro}
-          </p>
-          <ul className="space-y-2">
-            {content.audienceBullets.map((b) => (
-              <li key={b} className="flex items-start gap-2 text-sm">
-                <Check className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                {b}
-              </li>
-            ))}
-          </ul>
+            {/* Audience */}
+            <div>
+              <h3 className="font-semibold mb-2">{content.audienceTitle}</h3>
+              <p className="text-sm text-muted-foreground mb-3">
+                {content.audienceIntro}
+              </p>
+              <ul className="space-y-2">
+                {content.audienceBullets.map((b) => (
+                  <li key={b} className="flex items-start gap-2 text-sm">
+                    <Check className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                    {b}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          {/* Image side */}
+          {content.includeImage && (
+            <div className="flex-1 w-full">
+              <div className="relative w-full overflow-hidden rounded-2xl bg-muted/40 aspect-[3/4]">
+                <Image
+                  src={content.includeImage.src}
+                  alt={content.includeImage.alt}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw, 50vw"
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Application form */}
