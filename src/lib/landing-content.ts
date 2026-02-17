@@ -150,17 +150,17 @@ export const landingContent: LandingContent = {
         role: 'Gerente de producto y empresaria.',
       },
       {
-        quote: 'Me dio estructura sin quitarme libertad.',
-        body: 'No es una agenda más. Es un sistema. Me ayudó a ordenar mi cabeza y bajar decisiones grandes a pasos concretos.',
-        author: 'Andrea P.',
-        role: 'gerente de marketing',
+        quote: "Me encantó la asesoría, el acompañamiento, y la forma en la que la plataforma está construida.",
+        body: "Organizaba mis metas y logras en Excel pero siempre lo sentí incompleto y un poco tedioso de completar. VIA me encantó, tener la visibilidad de no solo cumplir mis objetivos por año, sino ver cómo mi vida se iba construyendo hasta 5 años, me recuerda hacia donde debo ir sin distraerme. Siento que encontré lo que estuve buscando por años.",
+        author:"Jesús M.",
+        role: "CEO y Empresario"
       },
       {
-        quote: 'La sesión de mentoría cambió completamente mi claridad.',
-        body: 'Creía que tenía metas claras. En la sesión entendí qué era realmente prioritario. Salí con dirección concreta para los próximos 12 meses.',
-        author: 'Sofía M.',
-        role: 'emprendedora',
-      },
+        quote: "Me dio estructura sin quitarme libertad.",
+        body: "No es una agenda ni un tracker más. Es una metodología que me ayudó a ordenar mi cabeza y bajar decisiones grandes a pasos concretos. Ahora me siento más tranquila de trabajar por aquello que es importante para mí.",
+        author:"Marily F.",
+        role: "Emprendedora y mamá"
+      }
     ],
   },
 
