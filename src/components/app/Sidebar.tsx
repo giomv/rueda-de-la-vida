@@ -4,9 +4,9 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  LayoutDashboard,
   CircleDot,
   User,
+  Users,
   HelpCircle,
   Map,
   Moon,
@@ -14,16 +14,18 @@ import {
   ListChecks,
   Wallet,
   Gauge,
+  BookOpen,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 const navItems = [
-  { href: '/inicio', label: 'Inicio', icon: LayoutDashboard },
   { href: '/dashboard', label: 'Dashboard', icon: Gauge },
   { href: '/mi-plan', label: 'Mi Plan', icon: ListChecks },
   { href: '/finanzas', label: 'Finanzas', icon: Wallet },
+  { href: '/bitacora', label: 'Bitácora', icon: BookOpen },
+  { href: '/espacios', label: 'Espacios', icon: Users },
   { href: '/mis-ruedas', label: 'Mis Ruedas', icon: CircleDot },
   { href: '/plan-de-vida', label: 'Plan de Vida', icon: Map },
   { href: '/perfil', label: 'Perfil', icon: User },
@@ -42,7 +44,7 @@ export function Sidebar() {
   return (
     <aside className="hidden md:flex flex-col w-64 border-r border-border bg-card h-screen sticky top-0">
       <div className="p-6">
-        <Link href="/inicio" className="flex items-center gap-2">
+        <Link href="/dashboard" className="flex items-center gap-2">
           <CircleDot className="h-8 w-8 text-primary" />
           <span className="font-bold text-xl">VIA</span>
         </Link>

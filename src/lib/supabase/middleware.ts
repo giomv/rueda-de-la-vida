@@ -30,14 +30,16 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   // Protected routes: redirect to login if not authenticated
-  const isAppRoute = request.nextUrl.pathname.startsWith('/inicio') ||
+  const isAppRoute = request.nextUrl.pathname.startsWith('/dashboard') ||
     request.nextUrl.pathname.startsWith('/rueda') ||
     request.nextUrl.pathname.startsWith('/mis-ruedas') ||
     request.nextUrl.pathname.startsWith('/plan-de-vida') ||
     request.nextUrl.pathname.startsWith('/comparar') ||
     request.nextUrl.pathname.startsWith('/pareja') ||
     request.nextUrl.pathname.startsWith('/perfil') ||
-    request.nextUrl.pathname.startsWith('/ayuda');
+    request.nextUrl.pathname.startsWith('/ayuda') ||
+    request.nextUrl.pathname.startsWith('/bitacora') ||
+    request.nextUrl.pathname.startsWith('/espacios');
 
   // Check for guest token
   const guestToken = request.cookies.get('guest_token')?.value;
@@ -55,7 +57,7 @@ export async function updateSession(request: NextRequest) {
 
   if (isAuthRoute && user) {
     const url = request.nextUrl.clone();
-    url.pathname = '/inicio';
+    url.pathname = '/dashboard';
     return NextResponse.redirect(url);
   }
 

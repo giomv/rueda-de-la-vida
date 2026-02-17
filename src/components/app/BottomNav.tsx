@@ -2,16 +2,16 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, CircleDot, User, Map, ListChecks, Wallet, Gauge } from 'lucide-react';
+import { CircleDot, User, Users, Map, ListChecks, Wallet, Gauge, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
-  { href: '/inicio', label: 'Inicio', icon: LayoutDashboard },
   { href: '/dashboard', label: 'Dashboard', icon: Gauge },
   { href: '/mi-plan', label: 'Mi Plan', icon: ListChecks },
   { href: '/finanzas', label: 'Finanzas', icon: Wallet },
   { href: '/plan-de-vida', label: 'Plan de vida', icon: Map },
-  { href: '/perfil', label: 'Perfil', icon: User },
+  { href: '/bitacora', label: 'Bitácora', icon: BookOpen },
+  { href: '/espacios', label: 'Espacios', icon: Users },
 ];
 
 export function BottomNav() {

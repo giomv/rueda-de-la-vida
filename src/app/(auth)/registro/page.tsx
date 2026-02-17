@@ -58,7 +58,7 @@ export default function RegisterPage() {
       }
     }
 
-    router.push('/inicio');
+    router.push('/dashboard');
     router.refresh();
   }
 

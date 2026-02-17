@@ -14,7 +14,7 @@ export async function loginAction(formData: FormData) {
     return { error: error.message };
   }
 
-  redirect('/inicio');
+  redirect('/dashboard');
 }
 
 export async function registerAction(formData: FormData) {
@@ -42,7 +42,7 @@ export async function registerAction(formData: FormData) {
     });
   }
 
-  redirect('/inicio');
+  redirect('/dashboard');
 }
 
 export async function logoutAction() {

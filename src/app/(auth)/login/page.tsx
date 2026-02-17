@@ -32,7 +32,7 @@ export default function LoginPage() {
       return;
     }
 
-    router.push('/inicio');
+    router.push('/dashboard');
     router.refresh();
   }
 

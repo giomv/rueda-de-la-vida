@@ -241,7 +241,7 @@ export interface GoalWithYear {
   title: string;
   metric: string | null;
   target_date: string | null;
-  origin: 'WHEEL' | 'ODYSSEY' | 'MANUAL';
+  origin: 'WHEEL' | 'ODYSSEY' | 'MANUAL' | 'JOURNAL';
   source_wheel_id: string | null;
   source_odyssey_id: string | null;
   is_archived: boolean;
