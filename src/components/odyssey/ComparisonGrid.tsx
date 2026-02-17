@@ -7,9 +7,10 @@ interface ComparisonGridProps {
   plans: PlanWithMilestones[];
   activePlanNumber: number | null;
   onSelectPlan: (planNumber: number) => void;
+  goalCounts?: Record<string, number>;
 }
 
-export function ComparisonGrid({ plans, activePlanNumber, onSelectPlan }: ComparisonGridProps) {
+export function ComparisonGrid({ plans, activePlanNumber, onSelectPlan, goalCounts }: ComparisonGridProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       {plans.map((plan) => (
@@ -18,6 +19,7 @@ export function ComparisonGrid({ plans, activePlanNumber, onSelectPlan }: Compar
           plan={plan}
           isSelected={activePlanNumber === plan.plan_number}
           onSelect={() => onSelectPlan(plan.plan_number)}
+          assignedGoalCount={goalCounts?.[plan.id] ?? 0}
         />
       ))}
     </div>

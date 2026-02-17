@@ -10,6 +10,7 @@ interface PlanSummaryCardProps {
   plan: PlanWithMilestones;
   isSelected: boolean;
   onSelect: () => void;
+  assignedGoalCount?: number;
 }
 
 const PLAN_COLORS: Record<number, string> = {
@@ -24,8 +25,9 @@ const PLAN_SELECTED_COLORS: Record<number, string> = {
   3: 'border-purple-500 bg-purple-50/50 dark:bg-purple-950/20',
 };
 
-export function PlanSummaryCard({ plan, isSelected, onSelect }: PlanSummaryCardProps) {
+export function PlanSummaryCard({ plan, isSelected, onSelect, assignedGoalCount = 0 }: PlanSummaryCardProps) {
   const planType = PLAN_TYPES.find((p) => p.number === plan.plan_number);
+  const totalGoals = plan.milestones.length + assignedGoalCount;
   const topMilestones = plan.milestones.slice(0, 3);
 
   return (
@@ -82,7 +84,7 @@ export function PlanSummaryCard({ plan, isSelected, onSelect }: PlanSummaryCardP
         )}
 
         <p className="text-xs text-muted-foreground">
-          {plan.milestones.length} metas en total
+          {totalGoals} metas en total
         </p>
       </CardContent>
     </Card>

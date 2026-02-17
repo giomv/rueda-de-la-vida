@@ -5,10 +5,13 @@ export interface OdysseyInsight {
   text: string;
 }
 
-export function generateOdysseyInsights(plans: PlanWithMilestones[]): OdysseyInsight[] {
+export function generateOdysseyInsights(plans: PlanWithMilestones[], goalCounts?: Record<string, number>): OdysseyInsight[] {
   const insights: OdysseyInsight[] = [];
 
   if (plans.length === 0) return insights;
+
+  const getTotalGoals = (plan: PlanWithMilestones) =>
+    plan.milestones.length + (goalCounts?.[plan.id] ?? 0);
 
   // Find the plan with highest average score
   const planAverages = plans.map((plan) => {
@@ -25,12 +28,13 @@ export function generateOdysseyInsights(plans: PlanWithMilestones[]): OdysseyIns
     });
   }
 
-  // Find plan with most milestones
-  const mostMilestones = plans.reduce((a, b) => (a.milestones.length > b.milestones.length ? a : b));
-  if (mostMilestones.milestones.length > 0) {
+  // Find plan with most goals (milestones + assigned wheel goals)
+  const mostGoals = plans.reduce((a, b) => (getTotalGoals(a) > getTotalGoals(b) ? a : b));
+  const mostGoalsCount = getTotalGoals(mostGoals);
+  if (mostGoalsCount > 0) {
     insights.push({
       type: 'suggestion',
-      text: `El Plan ${mostMilestones.plan_number} es el más detallado con ${mostMilestones.milestones.length} metas.`,
+      text: `El Plan ${mostGoals.plan_number} es el más detallado con ${mostGoalsCount} metas.`,
     });
   }
 

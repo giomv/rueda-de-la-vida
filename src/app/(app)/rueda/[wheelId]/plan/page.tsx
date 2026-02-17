@@ -12,7 +12,6 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { getWheelData, saveActionPlan } from '@/lib/actions/wheel-actions';
 import { SMARTGoalTooltip } from '@/components/shared/SMARTGoalTooltip';
-import { importFromWheel } from '@/lib/actions/import-actions';
 import { ChevronRight, ChevronLeft, ChevronDown, Plus, X, Target } from 'lucide-react';
 import type { Domain, ActionItem, PlanGoal, Reflection, IdealLife, FrequencyType } from '@/lib/types';
 import { REFLECTION_QUESTIONS, IDEAL_LIFE_PROMPTS, FREQUENCY_OPTIONS } from '@/lib/types';
@@ -193,9 +192,6 @@ export default function PlanPage() {
         actions: plan.actions,
       });
     }
-
-    // Auto-import actions to Mi Plan
-    await importFromWheel(wheelId);
 
     router.push('/mi-plan');
   };

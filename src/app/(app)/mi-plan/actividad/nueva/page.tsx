@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ActivityForm } from '@/components/lifeplan';
-import { syncLifePlanActivities } from '@/lib/actions/import-actions';
 import { getGoalsWithYears } from '@/lib/actions/dashboard-actions';
 import { getActiveWheelDomains } from '@/lib/actions/domain-actions';
 import type { LifeDomain } from '@/lib/types';
@@ -19,9 +18,6 @@ export default function NuevaActividadPage() {
 
   useEffect(() => {
     async function loadData() {
-      // Sync goals from wheel and odyssey before loading
-      await syncLifePlanActivities();
-
       // Fetch domains and goals with year information in parallel
       const [domainsData, goalsResponse] = await Promise.all([
         getActiveWheelDomains(),

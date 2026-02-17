@@ -14,6 +14,7 @@ import { useOdysseyStore } from '@/lib/stores/odyssey-store';
 import {
   getOdysseyData, createPrototype, savePrototypeSteps, savePrototypeActions, updatePrototypeMilestone,
 } from '@/lib/actions/odyssey-actions';
+import { getOdysseyGoals } from '@/lib/actions/odyssey-goal-actions';
 import { importActionsFromOdyssey, importFromOdyssey } from '@/lib/actions/import-actions';
 import { getActiveWheelDomains } from '@/lib/actions/domain-actions';
 import { FREQUENCY_OPTIONS } from '@/lib/types';
@@ -105,10 +106,27 @@ export default function PrototipoPage() {
         weeklyChecks: data.weeklyChecks,
       });
 
-      // Get milestones for the active plan
+      // Get milestones + wheel goals for the active plan
       const activePlan = data.plans.find((p) => p.plan_number === data.odyssey.active_plan_number);
       if (activePlan) {
-        setPlanMilestones(activePlan.milestones);
+        // Fetch assigned wheel goals and convert to milestone format
+        const goalData = await getOdysseyGoals(odysseyId, activePlan.id);
+        const goalAsMilestones: OdysseyMilestone[] = Object.entries(goalData.byYear).flatMap(
+          ([year, goals]) =>
+            goals.map((g) => ({
+              id: g.goal.id,
+              plan_id: activePlan.id,
+              year: Number(year),
+              category: null,
+              domain_id: g.goal.domain_id ?? null,
+              title: g.goal.title,
+              description: null,
+              tag: null,
+              order_position: g.assignment?.order_position ?? 0,
+              created_at: g.goal.created_at,
+            }))
+        );
+        setPlanMilestones([...activePlan.milestones, ...goalAsMilestones]);
       }
 
       // Group existing steps by milestone_id

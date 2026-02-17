@@ -9,6 +9,7 @@ import { ComparisonGrid } from '@/components/odyssey/ComparisonGrid';
 import { ComparisonInsights } from '@/components/odyssey/ComparisonInsights';
 import { useOdysseyStore } from '@/lib/stores/odyssey-store';
 import { getOdysseyData, selectActivePlan, updateOdyssey } from '@/lib/actions/odyssey-actions';
+import { getGoalAssignmentCountsByPlan } from '@/lib/actions/odyssey-goal-actions';
 import type { PlanWithMilestones } from '@/lib/types';
 
 export default function ComparacionPage() {
@@ -17,6 +18,7 @@ export default function ComparacionPage() {
   const odysseyId = params.odysseyId as string;
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [goalCounts, setGoalCounts] = useState<Record<string, number>>({});
 
   const {
     plans, activePlanNumber, setOdysseyId, hydrate, setActivePlanNumber,
@@ -24,7 +26,11 @@ export default function ComparacionPage() {
 
   useEffect(() => {
     async function load() {
-      const data = await getOdysseyData(odysseyId);
+      const [data, counts] = await Promise.all([
+        getOdysseyData(odysseyId),
+        getGoalAssignmentCountsByPlan(odysseyId),
+      ]);
+      setGoalCounts(counts);
       setOdysseyId(odysseyId);
       hydrate({
         plans: data.plans,
@@ -83,9 +89,10 @@ export default function ComparacionPage() {
           plans={plansWithData}
           activePlanNumber={activePlanNumber}
           onSelectPlan={handleSelectPlan}
+          goalCounts={goalCounts}
         />
 
-        <ComparisonInsights plans={plansWithData} />
+        <ComparisonInsights plans={plansWithData} goalCounts={goalCounts} />
 
         {!activePlanNumber && (
           <p className="text-sm text-muted-foreground text-center">

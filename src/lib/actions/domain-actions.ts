@@ -244,6 +244,23 @@ export async function getActiveWheelDomains(): Promise<LifeDomain[]> {
   return lifeDomains;
 }
 
+// --- Get a single domain by ID ---
+export async function getDomainById(domainId: string): Promise<LifeDomain | null> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('No autenticado');
+
+  const { data, error } = await supabase
+    .from('life_domains')
+    .select('*')
+    .eq('id', domainId)
+    .eq('user_id', user.id)
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw new Error(error.message);
+  return data || null;
+}
+
 // --- Find domain by slug (for fuzzy matching) ---
 export async function findDomainBySlug(slug: string): Promise<LifeDomain | null> {
   const supabase = await createClient();

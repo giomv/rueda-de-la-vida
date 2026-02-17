@@ -6,9 +6,8 @@ import { ChevronLeft, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ActivityForm } from '@/components/lifeplan';
 import { getActivity, deleteActivity } from '@/lib/actions/lifeplan-actions';
-import { syncLifePlanActivities } from '@/lib/actions/import-actions';
 import { getGoalsWithYears } from '@/lib/actions/dashboard-actions';
-import { getActiveWheelDomains } from '@/lib/actions/domain-actions';
+import { getActiveWheelDomains, getDomainById } from '@/lib/actions/domain-actions';
 import type { LifePlanActivity } from '@/lib/types/lifeplan';
 import type { LifeDomain } from '@/lib/types';
 import type { GoalWithYear } from '@/lib/types/dashboard';
@@ -27,17 +26,23 @@ export default function EditActivityPage() {
   useEffect(() => {
     async function loadData() {
       try {
-        // Sync goals from wheel and odyssey before loading
-        await syncLifePlanActivities();
-
         const [activityData, domainsData, goalsResponse] = await Promise.all([
           getActivity(activityId),
           getActiveWheelDomains(),
           getGoalsWithYears(),
         ]);
 
+        // If the activity's domain isn't in the active wheel's domains, fetch and append it
+        let mergedDomains = domainsData;
+        if (activityData?.domain_id && !domainsData.some(d => d.id === activityData.domain_id)) {
+          const missingDomain = await getDomainById(activityData.domain_id);
+          if (missingDomain) {
+            mergedDomains = [...domainsData, { ...missingDomain, name: `${missingDomain.name} (otra rueda)` }];
+          }
+        }
+
         setActivity(activityData);
-        setDomains(domainsData);
+        setDomains(mergedDomains);
         setGoals(goalsResponse.goals);
       } catch (error) {
         console.error('Error loading activity:', error);

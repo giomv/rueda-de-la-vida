@@ -6,6 +6,7 @@ import { AlertCircle, CheckCircle2, Lightbulb } from 'lucide-react';
 
 interface ComparisonInsightsProps {
   plans: PlanWithMilestones[];
+  goalCounts?: Record<string, number>;
 }
 
 const ICONS = {
@@ -20,8 +21,8 @@ const COLORS = {
   suggestion: 'text-blue-600 dark:text-blue-400',
 };
 
-export function ComparisonInsights({ plans }: ComparisonInsightsProps) {
-  const insights = generateOdysseyInsights(plans);
+export function ComparisonInsights({ plans, goalCounts }: ComparisonInsightsProps) {
+  const insights = generateOdysseyInsights(plans, goalCounts);
 
   if (insights.length === 0) return null;
 

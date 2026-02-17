@@ -302,6 +302,24 @@ export async function unassignGoal(planId: string, goalId: string): Promise<void
   if (error) throw new Error(error.message);
 }
 
+// Get assigned goal counts per plan for an odyssey
+export async function getGoalAssignmentCountsByPlan(odysseyId: string): Promise<Record<string, number>> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('odyssey_goal_assignments')
+    .select('plan_id')
+    .eq('odyssey_id', odysseyId);
+
+  if (error || !data) return {};
+
+  const counts: Record<string, number> = {};
+  for (const row of data) {
+    counts[row.plan_id] = (counts[row.plan_id] || 0) + 1;
+  }
+  return counts;
+}
+
 // Get selected wheel info for an odyssey
 export async function getSelectedWheel(odysseyId: string): Promise<Pick<Wheel, 'id' | 'title' | 'created_at'> | null> {
   const supabase = await createClient();
