@@ -18,7 +18,9 @@
       "Bash(find:*)",
       "WebFetch(domain:www.onemedical.com)",
       "Bash(psql:*)",
-      "Bash(npx supabase:*)"
+      "Bash(npx supabase:*)",
+      "Bash(cat:*)",
+      "Bash(npm install:*)"
     ]
   },
   "hooks": {

@@ -1,9 +1,31 @@
+export type UserRole = 'user' | 'admin';
+export type DocumentType = 'DNI' | 'PASSPORT';
+
 export interface Profile {
   id: string;
   display_name: string | null;
   avatar_url: string | null;
   dark_mode: boolean;
   reminders_enabled: boolean;
+  role: UserRole;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  document_type: DocumentType | null;
+  document_number: string | null;
+  birth_date: string | null;
+  terms_accepted: boolean;
+  force_password_change: boolean;
+  created_at: string;
+}
+
+export interface Invitation {
+  id: string;
+  email: string;
+  token: string;
+  invited_by: string | null;
+  expires_at: string;
+  used_at: string | null;
   created_at: string;
 }
 

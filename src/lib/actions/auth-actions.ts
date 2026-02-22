@@ -17,34 +17,6 @@ export async function loginAction(formData: FormData) {
   redirect('/dashboard');
 }
 
-export async function registerAction(formData: FormData) {
-  const supabase = await createClient();
-  const email = formData.get('email') as string;
-  const password = formData.get('password') as string;
-  const displayName = formData.get('displayName') as string;
-
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: { display_name: displayName },
-    },
-  });
-
-  if (error) {
-    return { error: error.message };
-  }
-
-  if (data.user) {
-    await supabase.from('profiles').upsert({
-      id: data.user.id,
-      display_name: displayName,
-    });
-  }
-
-  redirect('/dashboard');
-}
-
 export async function logoutAction() {
   const supabase = await createClient();
   await supabase.auth.signOut();

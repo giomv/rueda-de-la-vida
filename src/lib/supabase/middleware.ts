@@ -29,17 +29,31 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  const pathname = request.nextUrl.pathname;
+
+  // Public auth routes accessible without login
+  const isPublicAuthRoute =
+    pathname.startsWith('/registro-invitacion') ||
+    pathname.startsWith('/confirmacion-registro') ||
+    pathname.startsWith('/verificacion-exitosa');
+
+  if (isPublicAuthRoute) {
+    return supabaseResponse;
+  }
+
   // Protected routes: redirect to login if not authenticated
-  const isAppRoute = request.nextUrl.pathname.startsWith('/dashboard') ||
-    request.nextUrl.pathname.startsWith('/rueda') ||
-    request.nextUrl.pathname.startsWith('/mis-ruedas') ||
-    request.nextUrl.pathname.startsWith('/plan-de-vida') ||
-    request.nextUrl.pathname.startsWith('/comparar') ||
-    request.nextUrl.pathname.startsWith('/pareja') ||
-    request.nextUrl.pathname.startsWith('/perfil') ||
-    request.nextUrl.pathname.startsWith('/ayuda') ||
-    request.nextUrl.pathname.startsWith('/bitacora') ||
-    request.nextUrl.pathname.startsWith('/espacios');
+  const isAppRoute = pathname.startsWith('/dashboard') ||
+    pathname.startsWith('/rueda') ||
+    pathname.startsWith('/mis-ruedas') ||
+    pathname.startsWith('/plan-de-vida') ||
+    pathname.startsWith('/comparar') ||
+    pathname.startsWith('/pareja') ||
+    pathname.startsWith('/perfil') ||
+    pathname.startsWith('/ayuda') ||
+    pathname.startsWith('/bitacora') ||
+    pathname.startsWith('/espacios') ||
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/cambiar-clave');
 
   // Check for guest token
   const guestToken = request.cookies.get('guest_token')?.value;
@@ -50,14 +64,49 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // If user is authenticated, check for force password change and admin routes
+  if (user && isAppRoute) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role, force_password_change')
+      .eq('id', user.id)
+      .single();
+
+    // Force password change: redirect everywhere except /cambiar-clave
+    if (profile?.force_password_change && !pathname.startsWith('/cambiar-clave')) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/cambiar-clave';
+      return NextResponse.redirect(url);
+    }
+
+    // Admin routes: only admins can access
+    if (pathname.startsWith('/admin') && profile?.role !== 'admin') {
+      const url = request.nextUrl.clone();
+      url.pathname = '/dashboard';
+      return NextResponse.redirect(url);
+    }
+
+    // Admin users can only access /admin routes
+    if (profile?.role === 'admin' && !pathname.startsWith('/admin') && !pathname.startsWith('/cambiar-clave')) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/admin';
+      return NextResponse.redirect(url);
+    }
+  }
+
   // Redirect authenticated users away from auth pages
-  const isAuthRoute = request.nextUrl.pathname.startsWith('/login') ||
-    request.nextUrl.pathname.startsWith('/registro') ||
-    request.nextUrl.pathname.startsWith('/recuperar-clave');
+  const isAuthRoute = pathname.startsWith('/login') ||
+    pathname.startsWith('/recuperar-clave');
 
   if (isAuthRoute && user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
     const url = request.nextUrl.clone();
-    url.pathname = '/dashboard';
+    url.pathname = profile?.role === 'admin' ? '/admin' : '/dashboard';
     return NextResponse.redirect(url);
   }
 
