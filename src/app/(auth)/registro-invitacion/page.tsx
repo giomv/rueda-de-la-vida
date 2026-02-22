@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,20 @@ import {
 import { validateInvitation, registerWithInvitation } from '@/lib/actions/admin-actions';
 
 export default function RegistroInvitacionPage() {
+  return (
+    <Suspense fallback={
+      <Card>
+        <CardContent className="py-8 text-center text-muted-foreground">
+          Cargando...
+        </CardContent>
+      </Card>
+    }>
+      <RegistroInvitacionContent />
+    </Suspense>
+  );
+}
+
+function RegistroInvitacionContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const token = searchParams.get('token') || '';
