@@ -33,9 +33,7 @@ export async function updateSession(request: NextRequest) {
 
   // Public auth routes accessible without login
   const isPublicAuthRoute =
-    pathname.startsWith('/registro-invitacion') ||
-    pathname.startsWith('/confirmacion-registro') ||
-    pathname.startsWith('/verificacion-exitosa');
+    pathname.startsWith('/registro-invitacion');
 
   if (isPublicAuthRoute) {
     return supabaseResponse;

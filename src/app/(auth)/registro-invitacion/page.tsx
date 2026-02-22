@@ -108,7 +108,7 @@ function RegistroInvitacionContent() {
       return;
     }
 
-    router.push('/confirmacion-registro');
+    router.push('/dashboard');
   }
 
   if (validating) {

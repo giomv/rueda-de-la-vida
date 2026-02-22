@@ -33,12 +33,6 @@ export async function GET(request: NextRequest) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
-      if (type === 'signup' || type === 'email') {
-        // Email confirmation: sign out and show success page
-        await supabase.auth.signOut();
-        return NextResponse.redirect(`${origin}/verificacion-exitosa`);
-      }
-
       if (type === 'recovery') {
         return NextResponse.redirect(`${origin}/nueva-clave`);
       }
