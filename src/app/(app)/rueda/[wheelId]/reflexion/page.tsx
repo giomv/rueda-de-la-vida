@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { WizardProgress } from '@/components/app/WizardProgress';
 import { ReflectionForm } from '@/components/reflection/ReflectionForm';
 import { getWheelData, saveReflections } from '@/lib/actions/wheel-actions';
-import { ChevronRight, ChevronLeft } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Loader2 } from 'lucide-react';
 
 export default function ReflexionPage() {
   const params = useParams();
@@ -15,6 +15,7 @@ export default function ReflexionPage() {
 
   const [loading, setLoading] = useState(true);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -34,11 +35,16 @@ export default function ReflexionPage() {
   };
 
   const handleContinue = async () => {
-    const reflections = Object.entries(answers)
-      .filter(([, v]) => v.trim())
-      .map(([key, text]) => ({ question_key: key, answer_text: text }));
-    await saveReflections(wheelId, reflections);
-    router.push(`/rueda/${wheelId}/vida-ideal`);
+    setIsSaving(true);
+    try {
+      const reflections = Object.entries(answers)
+        .filter(([, v]) => v.trim())
+        .map(([key, text]) => ({ question_key: key, answer_text: text }));
+      await saveReflections(wheelId, reflections);
+      router.push(`/rueda/${wheelId}/vida-ideal`);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   if (loading) {
@@ -68,9 +74,9 @@ export default function ReflexionPage() {
             <ChevronLeft className="h-4 w-4 mr-1" />
             Prioridades
           </Button>
-          <Button onClick={handleContinue} className="flex-1">
+          <Button onClick={handleContinue} className="flex-1" disabled={isSaving}>
             Vida ideal
-            <ChevronRight className="h-4 w-4 ml-1" />
+            {isSaving ? <Loader2 className="h-4 w-4 ml-1 animate-spin" /> : <ChevronRight className="h-4 w-4 ml-1" />}
           </Button>
         </div>
       </div>

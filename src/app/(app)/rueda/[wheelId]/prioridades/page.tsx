@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { WizardProgress } from '@/components/app/WizardProgress';
 import { PriorityRanking } from '@/components/wheel/PriorityRanking';
 import { getWheelData, savePriorities } from '@/lib/actions/wheel-actions';
-import { ChevronRight, ChevronLeft } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Loader2 } from 'lucide-react';
 import type { Domain, Score } from '@/lib/types';
 
 export default function PrioridadesPage() {
@@ -19,6 +19,7 @@ export default function PrioridadesPage() {
   const [scores, setScores] = useState<Score[]>([]);
   const [orderedIds, setOrderedIds] = useState<string[]>([]);
   const [focusDomains, setFocusDomains] = useState<string[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -53,13 +54,18 @@ export default function PrioridadesPage() {
   };
 
   const handleContinue = async () => {
-    const priorities = orderedIds.map((id, index) => ({
-      domain_id: id,
-      rank: index + 1,
-      is_focus: focusDomains.includes(id),
-    }));
-    await savePriorities(wheelId, priorities);
-    router.push(`/rueda/${wheelId}/reflexion`);
+    setIsSaving(true);
+    try {
+      const priorities = orderedIds.map((id, index) => ({
+        domain_id: id,
+        rank: index + 1,
+        is_focus: focusDomains.includes(id),
+      }));
+      await savePriorities(wheelId, priorities);
+      router.push(`/rueda/${wheelId}/reflexion`);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   if (loading) {
@@ -105,10 +111,10 @@ export default function PrioridadesPage() {
           <Button
             onClick={handleContinue}
             className="flex-1"
-            disabled={focusDomains.length === 0}
+            disabled={focusDomains.length === 0 || isSaving}
           >
             Continuar a reflexión
-            <ChevronRight className="h-4 w-4 ml-1" />
+            {isSaving ? <Loader2 className="h-4 w-4 ml-1 animate-spin" /> : <ChevronRight className="h-4 w-4 ml-1" />}
           </Button>
         </div>
       </div>

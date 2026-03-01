@@ -272,8 +272,29 @@ export async function getUsers() {
 
   const { data: profiles } = await supabase
     .from('profiles')
-    .select('id, display_name, first_name, last_name, email, role, created_at')
+    .select('id, display_name, first_name, last_name, email, role, is_enabled, created_at')
     .order('created_at', { ascending: false });
 
   return profiles || [];
+}
+
+export async function toggleUserEnabled(userId: string, enabled: boolean) {
+  const admin = await requireAdmin();
+
+  if (admin.id === userId) {
+    return { error: 'No puedes deshabilitar tu propia cuenta.' };
+  }
+
+  const serviceClient = createServiceClient();
+
+  const { error } = await serviceClient
+    .from('profiles')
+    .update({ is_enabled: enabled })
+    .eq('id', userId);
+
+  if (error) {
+    return { error: 'Error al actualizar el estado del usuario.' };
+  }
+
+  return { success: true };
 }

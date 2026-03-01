@@ -14,7 +14,8 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { UserPlus, Mail, Clock, CheckCircle, RotateCw } from 'lucide-react';
-import { sendInvitation, resendInvitation, getInvitations, getUsers } from '@/lib/actions/admin-actions';
+import { sendInvitation, resendInvitation, getInvitations, getUsers, toggleUserEnabled } from '@/lib/actions/admin-actions';
+import { createClient } from '@/lib/supabase/client';
 import type { Invitation } from '@/lib/types';
 
 interface UserRow {
@@ -24,6 +25,7 @@ interface UserRow {
   last_name: string | null;
   email: string | null;
   role: string;
+  is_enabled: boolean;
   created_at: string;
 }
 
@@ -36,6 +38,8 @@ export default function AdminPage() {
   const [inviteLoading, setInviteLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [resendingId, setResendingId] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   async function loadData() {
@@ -50,6 +54,9 @@ export default function AdminPage() {
 
   useEffect(() => {
     loadData();
+    createClient().auth.getUser().then(({ data }) => {
+      if (data.user) setCurrentUserId(data.user.id);
+    });
   }, []);
 
   async function handleInvite(e: React.FormEvent) {
@@ -86,6 +93,16 @@ export default function AdminPage() {
     }
     await loadData();
     setResendingId(null);
+  }
+
+  async function handleToggleEnabled(userId: string, enabled: boolean) {
+    setTogglingId(userId);
+    const result = await toggleUserEnabled(userId, enabled);
+    if (result.error) {
+      setInviteError(result.error);
+    }
+    await loadData();
+    setTogglingId(null);
   }
 
   function getInvitationStatus(inv: Invitation) {
@@ -155,7 +172,9 @@ export default function AdminPage() {
                   <th className="pb-2 pr-4">Nombre</th>
                   <th className="pb-2 pr-4">Correo</th>
                   <th className="pb-2 pr-4">Rol</th>
-                  <th className="pb-2">Creado</th>
+                  <th className="pb-2 pr-4">Estado</th>
+                  <th className="pb-2 pr-4">Creado</th>
+                  <th className="pb-2">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -172,7 +191,28 @@ export default function AdminPage() {
                         {user.role}
                       </Badge>
                     </td>
-                    <td className="py-3">{formatDate(user.created_at)}</td>
+                    <td className="py-3 pr-4">
+                      <Badge variant={user.is_enabled ? 'default' : 'destructive'}>
+                        {user.is_enabled ? 'Activo' : 'Deshabilitado'}
+                      </Badge>
+                    </td>
+                    <td className="py-3 pr-4">{formatDate(user.created_at)}</td>
+                    <td className="py-3">
+                      {user.id !== currentUserId && (
+                        <Button
+                          size="sm"
+                          variant={user.is_enabled ? 'destructive' : 'default'}
+                          disabled={togglingId === user.id}
+                          onClick={() => handleToggleEnabled(user.id, !user.is_enabled)}
+                        >
+                          {togglingId === user.id
+                            ? 'Procesando...'
+                            : user.is_enabled
+                              ? 'Deshabilitar'
+                              : 'Habilitar'}
+                        </Button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

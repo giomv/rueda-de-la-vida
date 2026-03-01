@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { WizardProgress } from '@/components/app/WizardProgress';
 import { IdealLifeForm } from '@/components/reflection/IdealLifeForm';
 import { getWheelData, saveIdealLife } from '@/lib/actions/wheel-actions';
-import { ChevronRight, ChevronLeft } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Loader2 } from 'lucide-react';
 import type { Domain } from '@/lib/types';
 
 interface DomainIdealState {
@@ -22,6 +22,7 @@ export default function VidaIdealPage() {
   const [loading, setLoading] = useState(true);
   const [focusDomains, setFocusDomains] = useState<Domain[]>([]);
   const [idealState, setIdealState] = useState<Record<string, DomainIdealState>>({});
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -64,13 +65,18 @@ export default function VidaIdealPage() {
   };
 
   const handleContinue = async () => {
-    const items = Object.entries(idealState).map(([domainId, state]) => ({
-      domain_id: domainId,
-      vision_text: state.visionText,
-      prompts_answers: state.promptAnswers,
-    }));
-    await saveIdealLife(wheelId, items);
-    router.push(`/rueda/${wheelId}/plan`);
+    setIsSaving(true);
+    try {
+      const items = Object.entries(idealState).map(([domainId, state]) => ({
+        domain_id: domainId,
+        vision_text: state.visionText,
+        prompts_answers: state.promptAnswers,
+      }));
+      await saveIdealLife(wheelId, items);
+      router.push(`/rueda/${wheelId}/plan`);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   if (loading) {
@@ -116,9 +122,9 @@ export default function VidaIdealPage() {
             <ChevronLeft className="h-4 w-4 mr-1" />
             Reflexión
           </Button>
-          <Button onClick={handleContinue} className="flex-1">
+          <Button onClick={handleContinue} className="flex-1" disabled={isSaving}>
             Plan de acción
-            <ChevronRight className="h-4 w-4 ml-1" />
+            {isSaving ? <Loader2 className="h-4 w-4 ml-1 animate-spin" /> : <ChevronRight className="h-4 w-4 ml-1" />}
           </Button>
         </div>
       </div>

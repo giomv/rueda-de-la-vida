@@ -12,7 +12,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { getWheelData, saveActionPlan } from '@/lib/actions/wheel-actions';
 import { SMARTGoalTooltip } from '@/components/shared/SMARTGoalTooltip';
-import { ChevronRight, ChevronLeft, ChevronDown, Plus, X, Target } from 'lucide-react';
+import { ChevronRight, ChevronLeft, ChevronDown, Plus, X, Target, Loader2 } from 'lucide-react';
 import type { Domain, ActionItem, PlanGoal, Reflection, IdealLife, FrequencyType } from '@/lib/types';
 import { REFLECTION_QUESTIONS, IDEAL_LIFE_PROMPTS, FREQUENCY_OPTIONS } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -36,6 +36,7 @@ export default function PlanPage() {
   const [plans, setPlans] = useState<Record<string, PlanState>>({});
   const [newActionText, setNewActionText] = useState<Record<string, string>>({});
   const [newActionFrequency, setNewActionFrequency] = useState<Record<string, FrequencyType>>({});
+  const [isSaving, setIsSaving] = useState(false);
   const [newGoalText, setNewGoalText] = useState<Record<string, string>>({});
   const [reflections, setReflections] = useState<Reflection[]>([]);
   const [idealLife, setIdealLife] = useState<IdealLife[]>([]);
@@ -183,17 +184,21 @@ export default function PlanPage() {
   };
 
   const handleContinue = async () => {
-    for (const [domainId, plan] of Object.entries(plans)) {
-      await saveActionPlan(wheelId, {
-        domain_id: domainId,
-        goal_text: plan.goals[0]?.text || '',
-        target_score: plan.targetScore,
-        goals: plan.goals,
-        actions: plan.actions,
-      });
+    setIsSaving(true);
+    try {
+      for (const [domainId, plan] of Object.entries(plans)) {
+        await saveActionPlan(wheelId, {
+          domain_id: domainId,
+          goal_text: plan.goals[0]?.text || '',
+          target_score: plan.targetScore,
+          goals: plan.goals,
+          actions: plan.actions,
+        });
+      }
+      router.push('/mi-plan');
+    } finally {
+      setIsSaving(false);
     }
-
-    router.push('/mi-plan');
   };
 
   // Render the goal sections for a domain
@@ -500,8 +505,8 @@ export default function PlanPage() {
             <ChevronLeft className="h-4 w-4 mr-1" />
             Vida ideal
           </Button>
-          <Button onClick={handleContinue} className="flex-1">
-            Seguimiento de plan
+          <Button onClick={handleContinue} className="flex-1" disabled={isSaving}>
+            {isSaving ? <><Loader2 className="h-4 w-4 animate-spin" /> Guardando...</> : 'Seguimiento de plan'}
           </Button>
         </div>
       </div>

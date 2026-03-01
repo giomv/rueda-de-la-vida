@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { Plus, Star, Trash2, Link as LinkIcon, Users, Globe, Lock } from 'lucide-react';
+import { Plus, Star, Trash2, Link as LinkIcon, Users, Globe, Lock, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -680,7 +680,7 @@ export function SessionForm({
         </Button>
         <Button type="submit" disabled={isSaving || !store.date || !store.type.trim()} className="flex-1">
           {isSaving
-            ? 'Guardando...'
+            ? <><Loader2 className="h-4 w-4 animate-spin" /> Guardando...</>
             : session
               ? (isOwner ? 'Guardar cambios' : 'Guardar mis items')
               : 'Guardar sesión'}

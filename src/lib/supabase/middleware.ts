@@ -66,9 +66,18 @@ export async function updateSession(request: NextRequest) {
   if (user && isAppRoute) {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role, force_password_change')
+      .select('role, force_password_change, is_enabled')
       .eq('id', user.id)
       .single();
+
+    // Disabled user: sign out and redirect to login
+    if (profile?.is_enabled === false) {
+      await supabase.auth.signOut();
+      const url = request.nextUrl.clone();
+      url.pathname = '/login';
+      url.searchParams.set('disabled', 'true');
+      return NextResponse.redirect(url);
+    }
 
     // Force password change: redirect everywhere except /cambiar-clave
     if (profile?.force_password_change && !pathname.startsWith('/cambiar-clave')) {

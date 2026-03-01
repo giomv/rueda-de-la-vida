@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Loader2 } from 'lucide-react';
 import { OdysseyProgress } from '@/components/odyssey/OdysseyProgress';
 import { TimelineBuilder } from '@/components/odyssey/TimelineBuilder';
 import { PlanHeadline } from '@/components/odyssey/PlanHeadline';
@@ -26,6 +26,7 @@ export default function Plan1Page() {
   const router = useRouter();
   const odysseyId = params.odysseyId as string;
   const [loading, setLoading] = useState(true);
+  const [isNavigating, setIsNavigating] = useState(false);
 
   // State for wheel selection and goals
   const [wheels, setWheels] = useState<Pick<Wheel, 'id' | 'title' | 'created_at'>[]>([]);
@@ -120,9 +121,14 @@ export default function Plan1Page() {
   const { isSaving } = useOdysseyAutoSave(saveFn);
 
   const handleContinue = async () => {
-    await saveFn();
-    await updateOdyssey(odysseyId, { current_step: 'plan-2' });
-    router.push(`/plan-de-vida/${odysseyId}/plan-2`);
+    setIsNavigating(true);
+    try {
+      await saveFn();
+      await updateOdyssey(odysseyId, { current_step: 'plan-2' });
+      router.push(`/plan-de-vida/${odysseyId}/plan-2`);
+    } finally {
+      setIsNavigating(false);
+    }
   };
 
   const handleAddMilestone = (data: { title: string; description: string; category: MilestoneCategory | null; domain_id: string | null; tag: MilestoneTag; year: number; replicateToAllYears?: boolean }) => {
@@ -317,9 +323,9 @@ export default function Plan1Page() {
 
       <div className="sticky bottom-16 md:bottom-0 border-t bg-background p-4">
         <div className="max-w-6xl mx-auto flex justify-end">
-          <Button onClick={handleContinue} disabled={isDirty || isSaving}>
+          <Button onClick={handleContinue} disabled={isDirty || isSaving || isNavigating}>
             Continuar al Plan 2
-            <ArrowRight className="h-4 w-4 ml-2" />
+            {isNavigating ? <Loader2 className="h-4 w-4 ml-2 animate-spin" /> : <ArrowRight className="h-4 w-4 ml-2" />}
           </Button>
         </div>
       </div>

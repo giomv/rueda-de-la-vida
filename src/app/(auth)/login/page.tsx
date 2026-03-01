@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,13 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get('disabled') === 'true') {
+      setError('Tu cuenta ha sido deshabilitada. Contacta al administrador.');
+    }
+  }, [searchParams]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -37,9 +44,16 @@ export default function LoginPage() {
     if (data.user) {
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role, force_password_change')
+        .select('role, force_password_change, is_enabled')
         .eq('id', data.user.id)
         .single();
+
+      if (profile?.is_enabled === false) {
+        await supabase.auth.signOut();
+        setError('Tu cuenta ha sido deshabilitada. Contacta al administrador.');
+        setLoading(false);
+        return;
+      }
 
       if (profile?.force_password_change) {
         router.push('/cambiar-clave');

@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FrequencySelector } from './FrequencySelector';
+import { Loader2 } from 'lucide-react';
 import { createActivity, updateActivity } from '@/lib/actions/lifeplan-actions';
 import { createGoal } from '@/lib/actions/goal-actions';
 import { cn } from '@/lib/utils';
@@ -313,7 +314,7 @@ export function ActivityForm({
           Cancelar
         </Button>
         <Button type="submit" disabled={isSaving || !domainId} className="flex-1">
-          {isSaving ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Crear acción'}
+          {isSaving ? <><Loader2 className="h-4 w-4 animate-spin" /> Guardando...</> : isEditing ? 'Guardar cambios' : 'Crear acción'}
         </Button>
       </div>
 

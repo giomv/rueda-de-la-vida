@@ -8,7 +8,7 @@ import { DomainList } from '@/components/wheel/DomainList';
 import { useWizardStore } from '@/lib/stores/wizard-store';
 import { useAutoSave } from '@/hooks/use-auto-save';
 import { saveDomains, getWheelData } from '@/lib/actions/wheel-actions';
-import { ChevronRight, Save } from 'lucide-react';
+import { ChevronRight, Save, Loader2 } from 'lucide-react';
 import type { Domain } from '@/lib/types';
 
 export default function DominiosPage() {
@@ -16,6 +16,7 @@ export default function DominiosPage() {
   const router = useRouter();
   const wheelId = params.wheelId as string;
   const [loading, setLoading] = useState(true);
+  const [isNavigating, setIsNavigating] = useState(false);
 
   const {
     domains,
@@ -67,8 +68,13 @@ export default function DominiosPage() {
   };
 
   const handleContinue = async () => {
-    await saveFn();
-    router.push(`/rueda/${wheelId}/puntajes`);
+    setIsNavigating(true);
+    try {
+      await saveFn();
+      router.push(`/rueda/${wheelId}/puntajes`);
+    } finally {
+      setIsNavigating(false);
+    }
   };
 
   if (loading) {
@@ -126,10 +132,10 @@ export default function DominiosPage() {
           <Button
             onClick={handleContinue}
             className="w-full"
-            disabled={domains.length < 4}
+            disabled={domains.length < 4 || isNavigating}
           >
             Continuar a puntajes
-            <ChevronRight className="h-4 w-4 ml-1" />
+            {isNavigating ? <Loader2 className="h-4 w-4 ml-1 animate-spin" /> : <ChevronRight className="h-4 w-4 ml-1" />}
           </Button>
         </div>
       </div>

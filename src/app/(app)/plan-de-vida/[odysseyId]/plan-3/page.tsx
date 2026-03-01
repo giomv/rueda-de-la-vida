@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ArrowRight, SkipForward } from 'lucide-react';
+import { ArrowLeft, ArrowRight, SkipForward, Loader2 } from 'lucide-react';
 import { OdysseyProgress } from '@/components/odyssey/OdysseyProgress';
 import { TimelineBuilder } from '@/components/odyssey/TimelineBuilder';
 import { PlanHeadline } from '@/components/odyssey/PlanHeadline';
@@ -26,6 +26,7 @@ export default function Plan3Page() {
   const router = useRouter();
   const odysseyId = params.odysseyId as string;
   const [loading, setLoading] = useState(true);
+  const [isNavigating, setIsNavigating] = useState(false);
 
   // State for wheel selection and goals
   const [wheels, setWheels] = useState<Pick<Wheel, 'id' | 'title' | 'created_at'>[]>([]);
@@ -120,15 +121,25 @@ export default function Plan3Page() {
   const { isSaving } = useOdysseyAutoSave(saveFn);
 
   const handleContinue = async () => {
-    await saveFn();
-    await updateOdyssey(odysseyId, { current_step: 'comparacion' });
-    router.push(`/plan-de-vida/${odysseyId}/comparacion`);
+    setIsNavigating(true);
+    try {
+      await saveFn();
+      await updateOdyssey(odysseyId, { current_step: 'comparacion' });
+      router.push(`/plan-de-vida/${odysseyId}/comparacion`);
+    } finally {
+      setIsNavigating(false);
+    }
   };
 
   const handleSkip = async () => {
-    await saveFn();
-    await updateOdyssey(odysseyId, { current_step: 'comparacion' });
-    router.push(`/plan-de-vida/${odysseyId}/comparacion`);
+    setIsNavigating(true);
+    try {
+      await saveFn();
+      await updateOdyssey(odysseyId, { current_step: 'comparacion' });
+      router.push(`/plan-de-vida/${odysseyId}/comparacion`);
+    } finally {
+      setIsNavigating(false);
+    }
   };
 
   const handleDuplicate = async (sourcePlan: number) => {
@@ -338,13 +349,13 @@ export default function Plan3Page() {
             Plan 2
           </Button>
           <div className="flex gap-2">
-            <Button variant="ghost" onClick={handleSkip} disabled={isSaving}>
+            <Button variant="ghost" onClick={handleSkip} disabled={isSaving || isNavigating}>
               Saltar
-              <SkipForward className="h-4 w-4 ml-2" />
+              {isNavigating ? <Loader2 className="h-4 w-4 ml-2 animate-spin" /> : <SkipForward className="h-4 w-4 ml-2" />}
             </Button>
-            <Button onClick={handleContinue} disabled={isDirty || isSaving}>
+            <Button onClick={handleContinue} disabled={isDirty || isSaving || isNavigating}>
               Ver Comparación
-              <ArrowRight className="h-4 w-4 ml-2" />
+              {isNavigating ? <Loader2 className="h-4 w-4 ml-2 animate-spin" /> : <ArrowRight className="h-4 w-4 ml-2" />}
             </Button>
           </div>
         </div>

@@ -16,6 +16,7 @@ export interface Profile {
   birth_date: string | null;
   terms_accepted: boolean;
   force_password_change: boolean;
+  is_enabled: boolean;
   created_at: string;
 }
 

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Map, ArrowRight, Users, User } from 'lucide-react';
+import { Map, ArrowRight, Users, User, Loader2 } from 'lucide-react';
 import { createOdyssey } from '@/lib/actions/odyssey-actions';
 import { cn } from '@/lib/utils';
 
@@ -137,8 +137,7 @@ export default function NuevaOdysseyPage() {
         onClick={handleCreate}
         disabled={!title.trim() || creating}
       >
-        {creating ? 'Creando...' : 'Crear plan'}
-        <ArrowRight className="h-4 w-4 ml-2" />
+        {creating ? <><Loader2 className="h-4 w-4 animate-spin" /> Creando...</> : <>Crear plan <ArrowRight className="h-4 w-4 ml-2" /></>}
       </Button>
     </div>
   );

@@ -8,13 +8,14 @@ import { ScoreSlider } from '@/components/wheel/ScoreSlider';
 import { useWizardStore } from '@/lib/stores/wizard-store';
 import { useAutoSave } from '@/hooks/use-auto-save';
 import { saveScores, getWheelData } from '@/lib/actions/wheel-actions';
-import { ChevronRight, ChevronLeft } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Loader2 } from 'lucide-react';
 
 export default function PuntajesPage() {
   const params = useParams();
   const router = useRouter();
   const wheelId = params.wheelId as string;
   const [loading, setLoading] = useState(true);
+  const [isNavigating, setIsNavigating] = useState(false);
 
   const { domains, scores, updateScore, setWheelId, hydrate, isDirty } =
     useWizardStore();
@@ -70,8 +71,13 @@ export default function PuntajesPage() {
   ).length;
 
   const handleContinue = async () => {
-    await saveFn();
-    router.push(`/rueda/${wheelId}/resultado`);
+    setIsNavigating(true);
+    try {
+      await saveFn();
+      router.push(`/rueda/${wheelId}/resultado`);
+    } finally {
+      setIsNavigating(false);
+    }
   };
 
   if (loading) {
@@ -134,9 +140,9 @@ export default function PuntajesPage() {
             <ChevronLeft className="h-4 w-4 mr-1" />
             Dominios
           </Button>
-          <Button disabled={isDirty || isSaving} onClick={handleContinue} className="flex-1">
+          <Button disabled={isDirty || isSaving || isNavigating} onClick={handleContinue} className="flex-1">
             Ver resultado
-            <ChevronRight className="h-4 w-4 ml-1" />
+            {isNavigating ? <Loader2 className="h-4 w-4 ml-1 animate-spin" /> : <ChevronRight className="h-4 w-4 ml-1" />}
           </Button>
         </div>
       </div>
