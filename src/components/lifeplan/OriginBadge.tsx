@@ -14,6 +14,7 @@ const ORIGIN_CONFIG: Record<SourceType, { label: string; variant: 'default' | 's
   ODYSSEY: { label: 'Plan de vida', variant: 'secondary' },
   MANUAL: { label: 'Manual', variant: 'outline' },
   JOURNAL: { label: 'Bitácora', variant: 'secondary' },
+  SPECIALIST: { label: 'Especialista', variant: 'default' },
 };
 
 export function OriginBadge({ origin, className }: OriginBadgeProps) {

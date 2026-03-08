@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
+import type { Profile } from '@/lib/types';
 
 async function requireAdmin() {
   const supabase = await createClient();
@@ -18,7 +19,7 @@ async function requireAdmin() {
   return user;
 }
 
-export async function sendInvitation(email: string) {
+export async function sendInvitation(email: string, role: 'user' | 'specialist' = 'user') {
   const admin = await requireAdmin();
 
   const supabase = await createClient();
@@ -57,6 +58,7 @@ export async function sendInvitation(email: string) {
       email,
       token,
       invited_by: admin.id,
+      role,
     });
 
   if (insertError) {
@@ -164,17 +166,24 @@ export async function registerWithInvitation(data: {
   if (signUpData.user) {
     // Update profile with personal data using service client (bypasses RLS)
     const serviceClient = createServiceClient();
+    const profileUpdate: Partial<Pick<Profile, 'first_name' | 'last_name' | 'display_name' | 'document_type' | 'document_number' | 'birth_date' | 'terms_accepted' | 'role'>> = {
+      first_name: data.firstName,
+      last_name: data.lastName,
+      display_name: `${data.firstName} ${data.lastName}`,
+      document_type: data.documentType as Profile['document_type'],
+      document_number: data.documentNumber,
+      birth_date: data.birthDate,
+      terms_accepted: true,
+    };
+
+    // Set role from invitation (specialist invitations create specialist accounts)
+    if (invitation.role === 'specialist') {
+      profileUpdate.role = invitation.role;
+    }
+
     await serviceClient
       .from('profiles')
-      .update({
-        first_name: data.firstName,
-        last_name: data.lastName,
-        display_name: `${data.firstName} ${data.lastName}`,
-        document_type: data.documentType,
-        document_number: data.documentNumber,
-        birth_date: data.birthDate,
-        terms_accepted: true,
-      })
+      .update(profileUpdate)
       .eq('id', signUpData.user.id);
 
     // Mark invitation as used

@@ -1,6 +1,6 @@
 // LifePlan (Mi Plan) types
 
-export type SourceType = 'WHEEL' | 'ODYSSEY' | 'MANUAL' | 'JOURNAL';
+export type SourceType = 'WHEEL' | 'ODYSSEY' | 'MANUAL' | 'JOURNAL' | 'SPECIALIST';
 export type FrequencyType = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'ONCE';
 export type ViewMode = 'day' | 'week' | 'month' | 'once';
 export type FilterType = 'all' | 'domain' | 'goal' | 'uncategorized';
@@ -157,4 +157,5 @@ export const ORIGIN_BADGES: { key: SourceType; label: string; color: string }[] 
   { key: 'ODYSSEY', label: 'Plan de vida', color: 'purple' },
   { key: 'MANUAL', label: 'Manual', color: 'gray' },
   { key: 'JOURNAL', label: 'Bitácora', color: 'amber' },
+  { key: 'SPECIALIST', label: 'Especialista', color: 'emerald' },
 ];

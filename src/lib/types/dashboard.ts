@@ -1,7 +1,7 @@
 // Dashboard (Zona Privada) types
 
 import type { LifeDomain } from './index';
-import type { Goal } from './lifeplan';
+import type { Goal, SourceType } from './lifeplan';
 
 // ===== FILTER TYPES =====
 
@@ -241,7 +241,7 @@ export interface GoalWithYear {
   title: string;
   metric: string | null;
   target_date: string | null;
-  origin: 'WHEEL' | 'ODYSSEY' | 'MANUAL' | 'JOURNAL';
+  origin: SourceType;
   source_wheel_id: string | null;
   source_odyssey_id: string | null;
   is_archived: boolean;

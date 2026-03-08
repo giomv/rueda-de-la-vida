@@ -1,4 +1,4 @@
-export type UserRole = 'user' | 'admin';
+export type UserRole = 'user' | 'admin' | 'specialist';
 export type DocumentType = 'DNI' | 'PASSPORT';
 
 export interface Profile {
@@ -25,6 +25,7 @@ export interface Invitation {
   email: string;
   token: string;
   invited_by: string | null;
+  role: 'user' | 'specialist';
   expires_at: string;
   used_at: string | null;
   created_at: string;
@@ -229,3 +230,4 @@ export * from './odyssey';
 export * from './lifeplan';
 export * from './finances';
 export * from './dashboard';
+export * from './specialist';

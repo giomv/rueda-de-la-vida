@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState, useEffect, useCallback } from 'react';
+import { Suspense, useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Plus, Search, X } from 'lucide-react';
@@ -15,12 +15,20 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SessionCard } from '@/components/journal/SessionCard';
+import { SpecialistEntryCard } from '@/components/journal/SpecialistEntryCard';
+import { SpecialistInviteBanner } from '@/components/journal/SpecialistInviteBanner';
 import { listSessions } from '@/lib/actions/journal-actions';
+import { listMySpecialistBitacoraEntries } from '@/lib/actions/specialist-user-actions';
 import { listSharedSpaces } from '@/lib/actions/space-actions';
 import { getUserDomains } from '@/lib/actions/domain-actions';
 import type { SessionListItem, SessionListFilters } from '@/lib/types/journal';
 import type { SharedSpace } from '@/lib/types/journal';
 import type { LifeDomain } from '@/lib/types';
+import type { SpecialistBitacoraEntryListItem } from '@/lib/types/specialist';
+
+type TimelineItem =
+  | { type: 'session'; data: SessionListItem; sortDate: string }
+  | { type: 'specialist'; data: SpecialistBitacoraEntryListItem; sortDate: string };
 
 export default function SesionesPage() {
   return (
@@ -41,6 +49,7 @@ function SesionesContent() {
   const initialSpaceId = searchParams.get('spaceId');
 
   const [sessions, setSessions] = useState<SessionListItem[]>([]);
+  const [specialistEntries, setSpecialistEntries] = useState<SpecialistBitacoraEntryListItem[]>([]);
   const [domains, setDomains] = useState<LifeDomain[]>([]);
   const [spaces, setSpaces] = useState<SharedSpace[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -49,7 +58,7 @@ function SesionesContent() {
   const [hasMore, setHasMore] = useState(false);
 
   // Filters
-  const [ownershipFilter, setOwnershipFilter] = useState<'all' | 'mine' | 'shared'>(
+  const [ownershipFilter, setOwnershipFilter] = useState<'all' | 'mine' | 'shared' | 'specialist'>(
     initialSpaceId ? 'shared' : 'all'
   );
   const [spaceFilter, setSpaceFilter] = useState<string>(initialSpaceId || 'ALL');
@@ -67,8 +76,11 @@ function SesionesContent() {
 
   const buildFilters = useCallback((): SessionListFilters => {
     const filters: SessionListFilters = { limit: 20 };
-    if (ownershipFilter !== 'all') filters.ownership = ownershipFilter;
-    if (ownershipFilter === 'shared' && spaceFilter !== 'ALL') filters.spaceId = spaceFilter;
+    if (ownershipFilter === 'mine') filters.ownership = 'mine';
+    if (ownershipFilter === 'shared') {
+      filters.ownership = 'shared';
+      if (spaceFilter !== 'ALL') filters.spaceId = spaceFilter;
+    }
     if (domainFilter !== 'ALL') filters.domain_id = domainFilter;
     if (debouncedSearch.trim()) filters.search = debouncedSearch.trim();
     return filters;
@@ -77,28 +89,51 @@ function SesionesContent() {
   const loadSessions = useCallback(async () => {
     setIsLoading(true);
     try {
-      const filters = buildFilters();
-      const result = await listSessions(filters);
-      setSessions(result.items);
-      setNextCursor(result.nextCursor);
-      setHasMore(result.hasMore);
+      if (ownershipFilter === 'specialist') {
+        // Only load specialist entries
+        const result = await listMySpecialistBitacoraEntries({ limit: 20 });
+        setSpecialistEntries(result.items);
+        setSessions([]);
+        setHasMore(result.hasMore);
+        setNextCursor(result.nextCursor);
+      } else {
+        // Load sessions (and specialist entries for 'all')
+        const filters = buildFilters();
+        const [sessionResult, specialistResult] = await Promise.all([
+          listSessions(filters),
+          ownershipFilter === 'all'
+            ? listMySpecialistBitacoraEntries({ limit: 20 })
+            : Promise.resolve({ items: [], hasMore: false, nextCursor: null }),
+        ]);
+        setSessions(sessionResult.items);
+        setSpecialistEntries(specialistResult.items);
+        setNextCursor(sessionResult.nextCursor);
+        setHasMore(sessionResult.hasMore);
+      }
     } catch {
       // Error handled silently - empty state will show
     } finally {
       setIsLoading(false);
     }
-  }, [buildFilters]);
+  }, [buildFilters, ownershipFilter]);
 
   const loadMore = async () => {
     if (!nextCursor || isLoadingMore) return;
     setIsLoadingMore(true);
     try {
-      const filters = buildFilters();
-      filters.cursor = nextCursor;
-      const result = await listSessions(filters);
-      setSessions((prev) => [...prev, ...result.items]);
-      setNextCursor(result.nextCursor);
-      setHasMore(result.hasMore);
+      if (ownershipFilter === 'specialist') {
+        const result = await listMySpecialistBitacoraEntries({ cursor: nextCursor, limit: 20 });
+        setSpecialistEntries((prev) => [...prev, ...result.items]);
+        setNextCursor(result.nextCursor);
+        setHasMore(result.hasMore);
+      } else {
+        const filters = buildFilters();
+        filters.cursor = nextCursor;
+        const result = await listSessions(filters);
+        setSessions((prev) => [...prev, ...result.items]);
+        setNextCursor(result.nextCursor);
+        setHasMore(result.hasMore);
+      }
     } catch {
       // Error handled silently
     } finally {
@@ -134,8 +169,21 @@ function SesionesContent() {
     domainFilter !== 'ALL' ||
     searchTerm.trim() !== '';
 
+  // Build unified timeline (memoized to avoid re-sort on every render)
+  const timelineItems = useMemo(() => {
+    const items: TimelineItem[] = [
+      ...sessions.map(s => ({ type: 'session' as const, data: s, sortDate: s.date + '|' + s.created_at })),
+      ...specialistEntries.map(e => ({ type: 'specialist' as const, data: e, sortDate: e.date + '|' + e.created_at })),
+    ];
+    items.sort((a, b) => b.sortDate.localeCompare(a.sortDate));
+    return items;
+  }, [sessions, specialistEntries]);
+
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
+      {/* Specialist Invite Banner */}
+      <SpecialistInviteBanner />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Bitácora</h1>
@@ -153,7 +201,7 @@ function SesionesContent() {
           <Select
             value={ownershipFilter}
             onValueChange={(v) => {
-              setOwnershipFilter(v as 'all' | 'mine' | 'shared');
+              setOwnershipFilter(v as 'all' | 'mine' | 'shared' | 'specialist');
               if (v !== 'shared') setSpaceFilter('ALL');
             }}
           >
@@ -164,6 +212,7 @@ function SesionesContent() {
               <SelectItem value="all">Todas</SelectItem>
               <SelectItem value="mine">Mis sesiones</SelectItem>
               <SelectItem value="shared">Compartidas conmigo</SelectItem>
+              <SelectItem value="specialist">De especialista</SelectItem>
             </SelectContent>
           </Select>
 
@@ -183,39 +232,43 @@ function SesionesContent() {
             </Select>
           )}
 
-          <Select value={domainFilter} onValueChange={setDomainFilter}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Dominio" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">Todos los dominios</SelectItem>
-              {domains.map((d) => (
-                <SelectItem key={d.id} value={d.id}>
-                  {d.icon && <span className="mr-1">{d.icon}</span>}
-                  {d.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Buscar sesiones..."
-            className="pl-9 pr-9"
-          />
-          {searchTerm && (
-            <button
-              onClick={() => setSearchTerm('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-4 w-4" />
-            </button>
+          {ownershipFilter !== 'specialist' && (
+            <Select value={domainFilter} onValueChange={setDomainFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Dominio" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">Todos los dominios</SelectItem>
+                {domains.map((d) => (
+                  <SelectItem key={d.id} value={d.id}>
+                    {d.icon && <span className="mr-1">{d.icon}</span>}
+                    {d.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           )}
         </div>
+
+        {ownershipFilter !== 'specialist' && (
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Buscar sesiones..."
+              className="pl-9 pr-9"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* List */}
@@ -225,7 +278,7 @@ function SesionesContent() {
             <Skeleton key={i} className="h-24 w-full rounded-lg" />
           ))}
         </div>
-      ) : sessions.length === 0 ? (
+      ) : timelineItems.length === 0 ? (
         <div className="py-12 text-center space-y-3">
           {hasActiveFilters ? (
             <>
@@ -252,9 +305,13 @@ function SesionesContent() {
         </div>
       ) : (
         <div className="space-y-3">
-          {sessions.map((session) => (
-            <SessionCard key={session.id} session={session} />
-          ))}
+          {timelineItems.map((item) =>
+            item.type === 'session' ? (
+              <SessionCard key={`session-${item.data.id}`} session={item.data} />
+            ) : (
+              <SpecialistEntryCard key={`specialist-${item.data.id}`} entry={item.data} />
+            )
+          )}
 
           {hasMore && (
             <div className="pt-2 text-center">

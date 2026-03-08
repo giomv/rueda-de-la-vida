@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { getHomePathForRole } from '@/lib/utils';
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -51,6 +52,7 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith('/bitacora') ||
     pathname.startsWith('/espacios') ||
     pathname.startsWith('/admin') ||
+    pathname.startsWith('/especialista') ||
     pathname.startsWith('/cambiar-clave');
 
   // Check for guest token
@@ -99,6 +101,20 @@ export async function updateSession(request: NextRequest) {
       url.pathname = '/admin';
       return NextResponse.redirect(url);
     }
+
+    // Specialist routes: only specialists can access
+    if (pathname.startsWith('/especialista') && profile?.role !== 'specialist') {
+      const url = request.nextUrl.clone();
+      url.pathname = '/dashboard';
+      return NextResponse.redirect(url);
+    }
+
+    // Specialist users can only access /especialista (+ /cambiar-clave)
+    if (profile?.role === 'specialist' && !pathname.startsWith('/especialista') && !pathname.startsWith('/cambiar-clave')) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/especialista';
+      return NextResponse.redirect(url);
+    }
   }
 
   // Redirect authenticated users away from auth pages
@@ -113,7 +129,7 @@ export async function updateSession(request: NextRequest) {
       .single();
 
     const url = request.nextUrl.clone();
-    url.pathname = profile?.role === 'admin' ? '/admin' : '/dashboard';
+    url.pathname = getHomePathForRole(profile?.role);
     return NextResponse.redirect(url);
   }
 
